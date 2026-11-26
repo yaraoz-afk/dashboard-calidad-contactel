@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 # =====================================================
 # CONFIGURACIÓN GENERAL
@@ -95,7 +94,7 @@ CRITERIOS = [
     "Tuteo al cliente/Cortesía"
 ]
 
-DIMENSIONE_CRITERIO = {
+DIMENSION_CRITERIO = {
     "Genera conexión positiva y de confianza en presentación": "Actitudinal",
     "Explica motivo de llamada claramente": "Comercial",
     "Explora necesidades reales": "Comercial",
@@ -118,17 +117,17 @@ DIMENSIONE_CRITERIO = {
 
 RECOMENDACIONES_CRITERIO = {
     "Genera conexión positiva y de confianza en presentación":
-        "Trabajar una apertura cálida y cercana en los primeros 15 segundos para generar confianza inicial.",
+        "Trabajar una apertura cálida y cercana en los primeros segundos para generar confianza inicial.",
     "Explica motivo de llamada claramente":
-        "Practicar un gancho inicial directo y claro para que el cliente entienda desde el inicio el para qué del contacto.",
+        "Practicar un gancho inicial directo y claro para que el cliente entienda desde el inicio el motivo de la llamada.",
     "Explora necesidades reales":
         "Reforzar preguntas abiertas y de diagnóstico antes de presentar la oferta.",
     "Escucha activa":
         "Evitar interrumpir y retomar palabras clave del cliente para demostrar atención real.",
     "Propuesta adaptada al cliente":
-        "Conectar cada característica del producto/servicio con la necesidad puntual detectada.",
+        "Conectar cada característica de la propuesta con la necesidad puntual detectada.",
     "Explica beneficios":
-        "Traducir atributos técnicos en beneficios concretos para el día a día o bolsillo del cliente.",
+        "Traducir atributos técnicos en beneficios concretos y relevantes para el cliente.",
     "Usa ejemplos / comparaciones":
         "Apoyarse en ejemplos cotidianos o comparaciones simples para facilitar la comprensión.",
     "No realiza monólogo":
@@ -138,7 +137,7 @@ RECOMENDACIONES_CRITERIO = {
     "Identifica objeción real":
         "Distinguir entre excusas superficiales y la objeción de fondo antes de responder.",
     "Maneja objeciones":
-        "Aplicar roleplays de manejo de objeciones (empatía + validación + reformulación/cierre).",
+        "Aplicar roleplays de manejo de objeciones (empatía, validación, reformulación y cierre).",
     "Realiza cierres parciales":
         "Confirmar acuerdos intermedios durante la llamada para construir el cierre final.",
     "Indica Valor a abonar":
@@ -267,7 +266,7 @@ def construir_detalle_criterios(datos):
                 "Campaña": fila["Campaña"],
                 "Tipo de gestión": tipo,
                 "Criterio": criterio,
-                "Dimensión": DIMENSIONE_CRITERIO.get(criterio, "Comercial"),
+                "Dimensión": DIMENSION_CRITERIO.get(criterio, "Comercial"),
                 "Respuesta": respuesta,
                 "Ponderación": peso,
                 "Descuento": descuento,
@@ -358,7 +357,7 @@ if df_con_fecha.empty:
     st.stop()
 
 # =====================================================
-# FILTROS GENERALES (PERÍODO, MESES, CAMPAÑAS, ASESORES)
+# FILTROS GENERALES
 # =====================================================
 st.subheader("Filtros generales")
 
@@ -555,7 +554,7 @@ with tab1:
     mostrar_tabla(por_tipo)
 
 # =====================================================
-# 2. ANÁLISIS POR ASESOR (CALIDAD + ASPECTOS CRÍTICOS)
+# 2. ANÁLISIS POR ASESOR
 # =====================================================
 with tab2:
     st.subheader("Análisis individual del asesor")
@@ -602,7 +601,8 @@ with tab2:
     if not puntos_trabajar.empty:
         puntos_trabajar["Fecha"] = puntos_trabajar["Fecha"].dt.strftime("%d/%m/%Y")
         puntos_trabajar["Puntaje final"] = puntos_trabajar["Puntaje final"].round(1)
-    mostrar_tabla(puntos_trabajar.sort_values("Fecha", ascending=False) if not puntos_trabajar.empty else puntos_trabajar)
+        puntos_trabajar = puntos_trabajar.sort_values("Fecha", ascending=False)
+    mostrar_tabla(puntos_trabajar)
 
     st.markdown("#### Descuentos por criterio")
     if not criterios_individual.empty:
@@ -956,4 +956,58 @@ with tab7:
             f"({peor_camp['Calidad']:.1f}%)."
         )
 
-    top
+    top_com_global = res_global_dim[res_global_dim["Dimensión"] == "Comercial"]
+    if not top_com_global.empty:
+        c_crit = top_com_global.iloc[0]
+        rec_c = RECOMENDACIONES_CRITERIO.get(c_crit["Criterio"], "Reforzar práctica guiada en coaching.")
+        hallazgos.append(
+            f"**Aspecto comercial más crítico:** **{c_crit['Criterio']}** "
+            f"({c_crit['Descuento']:.1f} pts descontados / {c_crit['% crítico']:.1f}% crítico). "
+            f"*Recomendación:* {rec_c}"
+        )
+
+    top_act_global = res_global_dim[res_global_dim["Dimensión"] == "Actitudinal"]
+    if not top_act_global.empty:
+        a_crit = top_act_global.iloc[0]
+        rec_a = RECOMENDACIONES_CRITERIO.get(a_crit["Criterio"], "Trabajar tono y cercanía en llamada.")
+        hallazgos.append(
+            f"**Aspecto actitudinal más crítico:** **{a_crit['Criterio']}** "
+            f"({a_crit['Descuento']:.1f} pts descontados / {a_crit['% crítico']:.1f}% crítico). "
+            f"*Recomendación:* {rec_a}"
+        )
+
+    if "¿Tipifica bien?" in filtrado.columns:
+        mal_tip = filtrado[filtrado["¿Tipifica bien?"].str.lower().isin(["no", "incorrecto"])]
+        if not mal_tip.empty:
+            pct_tip = len(mal_tip) / len(filtrado) * 100
+            hallazgos.append(
+                f"**Tipificación:** {len(mal_tip)} auditorías ({pct_tip:.1f}%) presentan error de tipificación. "
+                f"*Recomendación:* revisar catálogo de motivos y validar cierre de gestión en calibraciones."
+            )
+
+    for h in hallazgos:
+        st.markdown(f'<div class="insight-box">{h}</div>', unsafe_allow_html=True)
+
+    st.markdown("#### Plan de acción sugerido por criterio crítico")
+    if not res_global_dim.empty:
+        plan = res_global_dim.head(6).copy()
+        plan["Acción recomendada"] = plan["Criterio"].map(
+            lambda c: RECOMENDACIONES_CRITERIO.get(c, "Realizar coaching 1 a 1.")
+        )
+        mostrar_tabla(plan[[
+            "Dimensión", "Criterio", "Descuento", "% crítico", "Acción recomendada"
+        ]])
+
+# =====================================================
+# PIE Y ACTUALIZACIÓN
+# =====================================================
+st.divider()
+st.caption(
+    "Calidad y Capacitación | Contactel | "
+    "Actualización automática de datos cada 5 minutos."
+)
+st.caption("La columna AC (Acción) está excluida del análisis y de las vistas.")
+
+if st.button("Actualizar datos ahora"):
+    st.cache_data.clear()
+    st.rerun()
