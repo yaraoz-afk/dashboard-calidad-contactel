@@ -1,5 +1,6 @@
 import re
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 
@@ -555,16 +556,40 @@ table.tabla-comp tr:nth-child(even) td {{
     background-color: #f8fafc;
 }}
 
-/* Tabla Detalle por auditoria: títulos fijos arriba + Asesor fijo a la izquierda */
+/* Tabla Detalle por auditoria: títulos fijos arriba + Asesor fijo a la izquierda + scroll visible */
 .det-aud-wrap {{
     width: 100%;
-    max-height: 70vh;
-    overflow: auto;
+    height: 62vh;
+    min-height: 340px;
+    max-height: 620px;
+    overflow: scroll !important;
+    scrollbar-width: auto !important;
+    scrollbar-color: #64748b #e2e8f0 !important;
     background: #ffffff;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #94a3b8;
     border-radius: 6px;
-    margin-bottom: 18px;
+    margin: 8px 0;
 }}
+.det-aud-wrap::-webkit-scrollbar {{
+    width: 14px;
+    height: 14px;
+}}
+.det-aud-wrap::-webkit-scrollbar-track {{
+    background: #e2e8f0;
+    border-radius: 6px;
+}}
+.det-aud-wrap::-webkit-scrollbar-thumb {{
+    background: #64748b;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
+}}
+.det-aud-wrap::-webkit-scrollbar-thumb:hover {{
+    background: #475569;
+}}
+.det-aud-wrap::-webkit-scrollbar-corner {{
+    background: #e2e8f0;
+}}
+
 table.det-aud {{
     width: max-content;
     min-width: 100%;
@@ -586,7 +611,7 @@ table.det-aud th.th-meta {{
     color: #0f172a;
     font-weight: 700;
     text-align: center;
-    padding: 8px 9px;
+    padding: 8px 8px;
     white-space: nowrap;
 }}
 table.det-aud th.th-item {{
@@ -595,8 +620,8 @@ table.det-aud th.th-item {{
     font-weight: 700;
     text-align: center;
     padding: 7px 6px;
-    max-width: 135px;
-    min-width: 88px;
+    max-width: 130px;
+    min-width: 84px;
     white-space: normal;
     line-height: 1.15;
 }}
@@ -605,8 +630,8 @@ table.det-aud th.th-bloque {{
     color: #0f172a;
     font-weight: 800;
     text-align: center;
-    padding: 7px 7px;
-    min-width: 92px;
+    padding: 7px 6px;
+    min-width: 88px;
     white-space: normal;
     line-height: 1.15;
 }}
@@ -620,7 +645,7 @@ table.det-aud th.th-asesor-fijo {{
     font-weight: 800;
     text-align: left;
     padding: 8px 10px;
-    min-width: 185px;
+    min-width: 180px;
     white-space: nowrap;
     border-right: 2px solid #94a3b8;
     border-bottom: 2px solid #94a3b8;
@@ -631,7 +656,7 @@ table.det-aud td.td-asesor-fijo {{
     z-index: 1;
     background-color: #f8fafc;
     color: #0f172a;
-    padding: 7px 10px;
+    padding: 6px 10px;
     border-right: 2px solid #94a3b8;
     border-bottom: 1px solid #cbd5e1;
     vertical-align: top;
@@ -641,29 +666,42 @@ table.det-aud td.td-asesor-fijo {{
 table.det-aud td.td-meta {{
     background-color: #ffffff;
     color: #0f172a;
-    padding: 7px 9px;
+    padding: 6px 8px;
     border-right: 1px solid #cbd5e1;
     border-bottom: 1px solid #cbd5e1;
     vertical-align: top;
     font-weight: 600;
     white-space: nowrap;
 }}
-table.det-aud td.td-texto-largo {{
+table.det-aud td.td-puntos-trabajar {{
     background-color: #ffffff;
     color: #0f172a;
-    padding: 7px 9px;
+    padding: 5px 7px;
     border-right: 1px solid #cbd5e1;
     border-bottom: 1px solid #cbd5e1;
     vertical-align: top;
-    min-width: 230px;
-    max-width: 340px;
+    min-width: 120px;
+    max-width: 175px;
+    font-size: 11px;
     white-space: normal;
-    line-height: 1.32;
+    line-height: 1.25;
+}}
+table.det-aud td.td-observaciones {{
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 6px 8px;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+    vertical-align: top;
+    min-width: 220px;
+    max-width: 320px;
+    white-space: normal;
+    line-height: 1.3;
 }}
 table.det-aud td.td-pct {{
     text-align: center;
     vertical-align: middle;
-    padding: 7px 6px;
+    padding: 6px 6px;
     border-right: 1px solid #cbd5e1;
     border-bottom: 1px solid #cbd5e1;
     font-weight: 700;
@@ -674,7 +712,7 @@ table.det-aud td.td-bloque {{
     background-color: #f1f5f9;
     text-align: center;
     vertical-align: middle;
-    padding: 7px 7px;
+    padding: 6px 6px;
     border-right: 1px solid #cbd5e1;
     border-bottom: 1px solid #cbd5e1;
     font-weight: 800;
@@ -1162,6 +1200,35 @@ def construir_df_detalle_items(filtrado_det):
     return pd.DataFrame(registros, columns=cols_ordenadas)
 
 
+def render_controles_scroll_auditoria(id_sufijo):
+    components.html(
+        f"""
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:4px 0; font-family:sans-serif; font-size:12px; color:#334155;">
+            <span style="font-weight:700;">Desplazar cuadro:</span>
+            <button type="button" onclick="moverAud('left', 420)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">← Izquierda</button>
+            <button type="button" onclick="moverAud('right', 420)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">→ Derecha</button>
+            <button type="button" onclick="moverAud('up', 260)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">↑ Arriba</button>
+            <button type="button" onclick="moverAud('down', 260)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">↓ Abajo</button>
+            <button type="button" onclick="moverAud('reset', 0)" style="background:#f1f5f9; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">Inicio</button>
+        </div>
+        <script>
+        function moverAud(dir, px) {{
+            const doc = window.parent.document;
+            const box = doc.getElementById("det_aud_scroll_box");
+            if (!box) return;
+            if (dir === 'left') box.scrollLeft -= px;
+            if (dir === 'right') box.scrollLeft += px;
+            if (dir === 'up') box.scrollTop -= px;
+            if (dir === 'down') box.scrollTop += px;
+            if (dir === 'reset') {{ box.scrollLeft = 0; box.scrollTop = 0; }}
+        }}
+        </script>
+        """,
+        height=38,
+        key=f"ctrl_scroll_{id_sufijo}"
+    )
+
+
 def render_detalle_auditoria_pdf_html(df_det_items):
     if df_det_items.empty:
         st.info("No hay auditorías para mostrar con los filtros seleccionados.")
@@ -1188,8 +1255,10 @@ def render_detalle_auditoria_pdf_html(df_det_items):
             if col == "Asesor":
                 continue
             val = str(r[col])
-            if col in ("Puntos a trabajar", "Observaciones"):
-                celdas.append(f'<td class="td-texto-largo">{val}</td>')
+            if col == "Puntos a trabajar":
+                celdas.append(f'<td class="td-puntos-trabajar">{val}</td>')
+            elif col == "Observaciones":
+                celdas.append(f'<td class="td-observaciones">{val}</td>')
             elif col in meta_cols:
                 celdas.append(f'<td class="td-meta">{val}</td>')
             elif col in nombres_bloques:
@@ -1206,13 +1275,17 @@ def render_detalle_auditoria_pdf_html(df_det_items):
                 celdas.append(f'<td class="td-pct" style="background-color:{bg};">{val}</td>')
         filas_html.append(f"<tr>{''.join(celdas)}</tr>")
 
+    render_controles_scroll_auditoria("top")
+
     st.markdown(
-        f'<div class="det-aud-wrap"><table class="det-aud">'
+        f'<div id="det_aud_scroll_box" class="det-aud-wrap"><table class="det-aud">'
         f'<thead><tr>{"".join(th_html)}</tr></thead>'
         f'<tbody>{"".join(filas_html)}</tbody>'
         f'</table></div>',
         unsafe_allow_html=True
     )
+
+    render_controles_scroll_auditoria("bottom")
 
 
 @st.cache_data(ttl=300)
