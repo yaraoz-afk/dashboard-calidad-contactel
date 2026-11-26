@@ -119,12 +119,12 @@ div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 ul[role="listbox"],
 ul[role="listbox"] li,
-div[role="option"] {{
+div[data-baseweb="popover"] div[role="option"] {{
     background-color: {GRIS_DESPLEGABLE} !important;
     color: #000000 !important;
 }}
 ul[role="listbox"] li:hover,
-div[role="option"]:hover,
+div[data-baseweb="popover"] div[role="option"]:hover,
 li[aria-selected="true"] {{
     background-color: {GRIS_HOVER} !important;
     color: #000000 !important;
@@ -347,11 +347,15 @@ def limpiar_texto_etiqueta(valor):
     return " ".join(str(valor).split()).strip()
 
 
+def normalizar_clave(valor):
+    return limpiar_texto_etiqueta(valor).lower()
+
+
 def nombre_mes_desde_valor(mes_raw, fecha_dt):
     if pd.notna(fecha_dt):
         return MESES_ES.get(int(fecha_dt.month), "Sin mes")
 
-    texto = limpiar_texto_etiqueta(mes_raw).lower()
+    texto = normalizar_clave(mes_raw)
     if not texto or texto in ("nan", "nat", "sin mes"):
         return "Sin mes"
 
@@ -499,6 +503,8 @@ def leer_mediciones():
     datos["Mes_orden"] = datos["Mes"].map(lambda m: ORDEN_MESES.get(m, 99))
 
     datos["Año"] = datos["Fecha"].dt.year.astype("Int64").astype(str).replace("<NA>", "Sin año")
+    datos["Campaña_key"] = datos["Campaña"].apply(normalizar_clave)
+    datos["Asesor_key"] = datos["Asesor"].apply(normalizar_clave)
 
     return datos
 
@@ -617,9 +623,11 @@ def aplicar_filtros_independientes(base_df, anios_sel, meses_sel, camps_sel, ase
     if meses_sel and not todos_meses:
         out = out[out["Mes"].isin(meses_sel)]
     if camps_sel and not todas_camps:
-        out = out[out["Campaña"].isin(camps_sel)]
+        claves_c = {normalizar_clave(c) for c in camps_sel}
+        out = out[out["Campaña_key"].isin(claves_c)]
     if ases_sel and not todos_ases:
-        out = out[out["Asesor"].isin(ases_sel)]
+        claves_a = {normalizar_clave(a) for a in ases_sel}
+        out = out[out["Asesor_key"].isin(claves_a)]
     return out
 
 
@@ -662,16 +670,15 @@ with st.sidebar:
         a_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ases_filtro_mes")
         a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ases_filtro_camp")
 
-        # Asesores disponibles según las campañas elegidas en Por Asesor
-        base_ases_disp = df.copy()
-        if a_anios_sel and set(a_anios_sel) != set(años_disp):
-            base_ases_disp = base_ases_disp[base_ases_disp["Año"].isin(a_anios_sel)]
-        if a_meses_sel and set(a_meses_sel) != set(meses_disp):
-            base_ases_disp = base_ases_disp[base_ases_disp["Mes"].isin(a_meses_sel)]
-        if a_camps_sel and set(a_camps_sel) != set(camp_disp):
-            base_ases_disp = base_ases_disp[base_ases_disp["Campaña"].isin(a_camps_sel)]
+        todos_a_camps_pre = (set(a_camps_sel) == set(camp_disp)) if camp_disp else True
+        if a_camps_sel and not todos_a_camps_pre:
+            claves_c_pre = {normalizar_clave(c) for c in a_camps_sel}
+            ases_disp_vista = sorted(df[df["Campaña_key"].isin(claves_c_pre)]["Asesor"].dropna().unique())
+            if not ases_disp_vista:
+                ases_disp_vista = ases_disp
+        else:
+            ases_disp_vista = ases_disp
 
-        ases_disp_vista = sorted(base_ases_disp["Asesor"].dropna().unique())
         a_ases_sel = st.multiselect("Asesor", options=ases_disp_vista, default=ases_disp_vista, key="ases_filtro_ases")
 
     elif seccion == "Empresa":
@@ -702,6 +709,14 @@ if seccion == "Por Asesor":
         todos_a_anios, todos_a_meses, todos_a_camps, todos_a_ases
     )
 
+    # Si se eligió una campaña específica y con el año elegido dio vacío, busca la campaña en el Sheet
+    if filtrado_ases.empty and a_camps_sel and not todos_a_camps:
+        claves_c = {normalizar_clave(c) for c in a_camps_sel}
+        filtrado_ases = df[df["Campaña_key"].isin(claves_c)].copy()
+        if a_ases_sel and not todos_a_ases:
+            claves_a = {normalizar_clave(a) for a in a_ases_sel}
+            filtrado_ases = filtrado_ases[filtrado_ases["Asesor_key"].isin(claves_a)]
+
     st.subheader("Resumen de métricas — Por Asesor")
     k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("Auditorías filtradas", len(filtrado_ases), delta=f"Total Sheet: {len(df)}")
@@ -717,7 +732,6 @@ if seccion == "Por Asesor":
         st.stop()
 
     detalle_ases = construir_detalle_criterios(filtrado_ases)
-    # Solo asesores que tienen registros en la campaña y filtros seleccionados
     asesores_a_mostrar = sorted(filtrado_ases["Asesor"].unique())
 
     st.subheader("Tarjetas por Asesor")
