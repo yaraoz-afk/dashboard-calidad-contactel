@@ -14,8 +14,8 @@ st.set_page_config(
 VERDE_PRINCIPAL = "#30b44e"
 VERDE_OSCURO = "#1e7e34"
 VERDE_SUAVE = "#eaf7ed"
-GRIS_DESPLEGABLE = "#e5e7eb"
-GRIS_HOVER = "#d1d5db"
+GRIS_DESPLEGABLE = "#f1f5f9"
+GRIS_HOVER = "#dbeafe"
 ROJO_CRITICO = "#dc2626"
 NARANJA_TRABAJAR = "#ea580c"
 
@@ -32,6 +32,21 @@ MESES_ES = {
     10: "Octubre",
     11: "Noviembre",
     12: "Diciembre"
+}
+
+MESES_CORTO = {
+    "Enero": "Ene",
+    "Febrero": "Feb",
+    "Marzo": "Mar",
+    "Abril": "Abr",
+    "Mayo": "May",
+    "Junio": "Jun",
+    "Julio": "Jul",
+    "Agosto": "Ago",
+    "Septiembre": "Sep",
+    "Octubre": "Oct",
+    "Noviembre": "Nov",
+    "Diciembre": "Dic"
 }
 
 ORDEN_MESES = {nombre: num for num, nombre in MESES_ES.items()}
@@ -56,10 +71,10 @@ h1, h2 {{
 /* Tarjetas de métricas */
 div[data-testid="stMetric"] {{
     background: #ffffff;
-    border: 1px solid #b7e1c1;
+    border: 1px solid #cbd5e1;
     border-top: 4px solid {VERDE_PRINCIPAL};
     padding: 12px 14px;
-    border-radius: 10px;
+    border-radius: 8px;
 }}
 div[data-testid="stMetric"] label {{
     color: #1f2937 !important;
@@ -70,66 +85,57 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     font-weight: 700;
 }}
 
-/* Desplegables en gris con texto negro */
-div[data-baseweb="select"] > div,
-div[data-baseweb="input"] > div {{
+/* Contenedor de multiselect en gris claro con texto negro */
+div[data-baseweb="select"] > div {{
     background-color: {GRIS_DESPLEGABLE} !important;
     color: #000000 !important;
-    border: 1px solid #9ca3af !important;
-    border-radius: 8px !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 6px !important;
 }}
-div[data-baseweb="select"] span,
 div[data-baseweb="select"] input,
-div[data-baseweb="input"] input {{
+div[data-baseweb="select"] span {{
     color: #000000 !important;
 }}
 div[data-baseweb="select"] svg {{
-    fill: #000000 !important;
-    color: #000000 !important;
+    fill: #0f172a !important;
+    color: #0f172a !important;
 }}
 
-/* Etiquetas seleccionadas (tags) en verde #30b44e con texto blanco */
-[data-baseweb="tag"],
-[data-baseweb="tag"] > div,
-[data-baseweb="tag"] > span,
+/* Tags seleccionados en verde #30b44e con texto blanco */
 span[data-baseweb="tag"],
-div[data-baseweb="select"] [data-baseweb="tag"],
-div[data-testid="stMultiSelect"] [data-baseweb="tag"],
-div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
+div[data-baseweb="tag"] {{
     background-color: {VERDE_PRINCIPAL} !important;
-    background: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
     border: 1px solid {VERDE_OSCURO} !important;
-    border-radius: 6px !important;
+    border-radius: 5px !important;
 }}
-[data-baseweb="tag"] *,
-[data-baseweb="tag"] span,
-[data-baseweb="tag"] div,
-[data-baseweb="tag"] svg,
-[data-baseweb="tag"] path,
-div[data-testid="stMultiSelect"] [data-baseweb="tag"] * {{
+span[data-baseweb="tag"] span,
+span[data-baseweb="tag"] svg,
+span[data-baseweb="tag"] path,
+div[data-baseweb="tag"] span,
+div[data-baseweb="tag"] svg,
+div[data-baseweb="tag"] path {{
     background-color: transparent !important;
     color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
 }}
 
-/* Menú desplegable flotante en gris */
+/* Menú flotante de opciones (popover / listbox) siempre claro y legible */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
-ul[role="listbox"],
-ul[role="listbox"] li,
-div[data-baseweb="popover"] div[role="option"] {{
-    background-color: {GRIS_DESPLEGABLE} !important;
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] li,
+div[data-baseweb="popover"] [role="option"] {{
+    background-color: #ffffff !important;
     color: #000000 !important;
 }}
-ul[role="listbox"] li:hover,
-div[data-baseweb="popover"] div[role="option"]:hover,
-li[aria-selected="true"] {{
+div[data-baseweb="popover"] li:hover,
+div[data-baseweb="popover"] [role="option"]:hover {{
     background-color: {GRIS_HOVER} !important;
     color: #000000 !important;
 }}
-ul[role="listbox"] * {{
+div[data-baseweb="popover"] * {{
     color: #000000 !important;
 }}
 
@@ -139,7 +145,7 @@ ul[role="listbox"] * {{
     background-color: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     font-weight: 600 !important;
 }}
 .stButton > button:hover,
@@ -148,74 +154,88 @@ ul[role="listbox"] * {{
     color: #ffffff !important;
 }}
 
-/* Tarjeta compacta por asesor / campaña */
-.card-asesor {{
+/* Tarjeta compacta tipo informe ejecutivo */
+.card-compacta {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-top: 5px solid #1e3a8a;
-    border-radius: 8px;
-    padding: 14px;
+    border-radius: 4px;
+    padding: 12px 14px;
     margin-bottom: 16px;
     color: #000000;
 }}
-.card-asesor-titulo {{
-    font-size: 16px;
+.card-titulo {{
+    font-size: 15px;
     font-weight: 800;
     text-align: center;
     color: #0f172a;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    text-transform: uppercase;
 }}
-.card-asesor-sub {{
-    font-size: 12px;
+.card-sub {{
+    font-size: 11.5px;
     font-weight: 600;
     text-align: center;
     color: #334155;
     margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 7px;
+    border-bottom: 1px solid #cbd5e1;
 }}
-.sec-verde {{
-    background: #ecfdf5;
+.bloque-verde {{
+    background: #eaf7ed;
     border-left: 4px solid {VERDE_PRINCIPAL};
-    padding: 8px 10px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    font-size: 12.5px;
+    padding: 7px 9px;
+    margin-bottom: 7px;
+    font-size: 12px;
+    line-height: 1.35;
 }}
-.sec-rojo {{
+.bloque-rojo {{
     background: #fef2f2;
     border-left: 4px solid {ROJO_CRITICO};
-    padding: 8px 10px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    font-size: 12.5px;
+    padding: 7px 9px;
+    margin-bottom: 7px;
+    font-size: 12px;
+    line-height: 1.35;
 }}
-.sec-naranja {{
-    background: #fff7ed;
-    border-left: 4px solid {NARANJA_TRABAJAR};
-    padding: 8px 10px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    font-size: 12.5px;
+.bloque-naranja {{
+    background: #fffbeb;
+    border-left: 4px solid #eab308;
+    padding: 7px 9px;
+    margin-bottom: 7px;
+    font-size: 12px;
+    line-height: 1.35;
 }}
-.sec-neutro {{
+.bloque-feedback {{
     background: #f8fafc;
-    border-left: 4px solid #334155;
-    padding: 8px 10px;
-    border-radius: 4px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 6px;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.35;
+}}
+.tit-verde {{ color: #15803d; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-rojo {{ color: #b91c1c; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-naranja {{ color: #b45309; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-fb {{ color: #0f172a; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+
+.cuadro-comp-titulo {{
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 10px;
     margin-bottom: 8px;
-    font-size: 12.5px;
+    text-transform: uppercase;
 }}
 .deduccion-box {{
     background: #ffffff;
     border: 1px solid #86efac;
     border-left: 6px solid {VERDE_OSCURO};
-    border-radius: 10px;
-    padding: 16px 18px;
+    border-radius: 8px;
+    padding: 14px 16px;
     margin-top: 12px;
     margin-bottom: 16px;
     color: #000000;
-    font-size: 13.5px;
+    font-size: 13px;
 }}
 .comentario-card {{
     background: #ffffff;
@@ -226,10 +246,6 @@ ul[role="listbox"] * {{
     margin-bottom: 10px;
     font-size: 13px;
 }}
-.t-verde {{ color: #15803d; font-weight: 700; }}
-.t-rojo {{ color: #b91c1c; font-weight: 700; }}
-.t-naranja {{ color: #c2410c; font-weight: 700; }}
-.t-neutro {{ color: #1e293b; font-weight: 700; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -310,6 +326,27 @@ DIMENSION_CRITERIO = {
     "Tono natural y entusiasta": "Actitudinal",
     "Evita frases robotizadas": "Actitudinal",
     "Tuteo al cliente/Cortesía": "Actitudinal"
+}
+
+FOCO_DESARROLLO_CRITERIO = {
+    "Genera conexión positiva y de confianza en presentación": "Cercanía y calidez en la apertura inicial.",
+    "Explica motivo de llamada claramente": "Claridad y gancho directo en el motivo de llamada.",
+    "Explora necesidades reales": "Sondeo con preguntas abiertas antes de ofertar.",
+    "Escucha activa": "Escucha activa sin interrumpir y retomando al cliente.",
+    "Propuesta adaptada al cliente": "Adecuar la propuesta a la necesidad detectada.",
+    "Explica beneficios": "Traducir atributos en beneficios concretos.",
+    "Usa ejemplos / comparaciones": "Uso de ejemplos simples y cotidianos.",
+    "No realiza monólogo": "Evitar monólogos y pausar para validar comprensión.",
+    "Avanza hacia el cierre": "Conducción firme y ordenada hacia el cierre.",
+    "Identifica objeción real": "Detectar la objeción real detrás de la respuesta.",
+    "Maneja objeciones": "Seguridad y firmeza ante objeciones y negativas.",
+    "Realiza cierres parciales": "Confirmar acuerdos parciales durante la llamada.",
+    "Indica Valor a abonar": "Precisión al informar el valor a abonar.",
+    "Sin connotación de obligatoriedad": "Evitar tono impositivo u obligatoriedad.",
+    "Realiza de forma correcta cierres legales": "Cumplimiento completo de cierres legales.",
+    "Tono natural y entusiasta": "Dinamismo, naturalidad y energía vocal.",
+    "Evita frases robotizadas": "Hablar con naturalidad evitando lectura rígida.",
+    "Tuteo al cliente/Cortesía": "Sostener cortesía y trato acorde al cliente."
 }
 
 RECOMENDACIONES_CRITERIO = {
@@ -642,6 +679,81 @@ def aplicar_filtros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
     return out
 
 
+def sintesis_dimension(ejes_df, modo, dimension):
+    if ejes_df.empty:
+        return "Sin registro suficiente."
+    sub = ejes_df[ejes_df["Dimensión"] == dimension]
+    if sub.empty:
+        return "Sin registro en esta dimensión."
+
+    if modo == "positivo":
+        elegidos = sub.sort_values(["% Positivo_num", "Evaluaciones"], ascending=[False, False]).head(2)
+    elif modo == "critico":
+        elegidos = sub[sub["Criticos"] > 0].sort_values(["% Crítico_num", "Descuento"], ascending=[False, False]).head(2)
+        if elegidos.empty:
+            return "Sin desvíos críticos registrados."
+    else:
+        elegidos = sub[sub["Mejoras"] > 0].sort_values(["% Mejora_num", "Descuento"], ascending=[False, False]).head(2)
+        if elegidos.empty:
+            return "Sin puntos en desarrollo registrados."
+
+    partes = [FOCO_DESARROLLO_CRITERIO.get(r["Criterio"], r["Criterio"]) for _, r in elegidos.iterrows()]
+    return "; ".join(partes)
+
+
+def resumen_feedback_asesor(sub_a):
+    obs = [o for o in sub_a["Observaciones"].unique() if o and o.lower() != "nan"]
+    pts = [p for p in sub_a["Puntos a trabajar"].unique() if p and p.lower() != "nan"]
+    textos = []
+    if obs:
+        textos.append(" | ".join(obs[:2]))
+    if pts:
+        textos.append("A trabajar: " + " | ".join(pts[:2]))
+    return " — ".join(textos) if textos else "Seguimiento continuo de calidad y práctica guiada."
+
+
+def construir_cuadro_comparativo(filtrado_ases, meses_activos):
+    filas = []
+    meses_ord = ordenar_meses(meses_activos)
+
+    for nom_asesor in sorted(filtrado_ases["Asesor"].unique()):
+        sub_a = filtrado_ases[filtrado_ases["Asesor"] == nom_asesor]
+        crit_a = construir_detalle_criterios(sub_a)
+        ejes_a = resumen_ejes_criterios(crit_a)
+
+        fila = {"Asesor": nom_asesor}
+        proms_mes = []
+        for m in meses_ord:
+            g_m = sub_a[sub_a["Mes"] == m]["Puntaje final"].mean()
+            etq_m = f"Prom. {MESES_CORTO.get(m, m)}"
+            fila[etq_m] = fmt_pct(g_m) if pd.notna(g_m) else "-"
+            if pd.notna(g_m):
+                proms_mes.append((m, float(g_m)))
+
+        prom_tot = sub_a["Puntaje final"].mean()
+        fila["Prom. Total"] = fmt_pct(prom_tot)
+
+        if len(proms_mes) >= 2:
+            brecha = proms_mes[-1][1] - proms_mes[0][1]
+            signo = "+" if brecha > 0 else ""
+            estado_b = "Estable" if abs(brecha) < 3 else ("Ajuste" if brecha >= -15 else "Crítico")
+            fila["Brecha / Tendencia"] = f"{signo}{brecha:.1f}% ({estado_b})"
+        elif len(proms_mes) == 1:
+            fila["Brecha / Tendencia"] = "Sin variación (1 mes)"
+        else:
+            fila["Brecha / Tendencia"] = "Sin datos"
+
+        if not ejes_a.empty:
+            focos = [FOCO_DESARROLLO_CRITERIO.get(r["Criterio"], r["Criterio"]) for _, r in ejes_a.head(2).iterrows()]
+            fila["Foco principal de desarrollo"] = "; ".join(focos)
+        else:
+            fila["Foco principal de desarrollo"] = "Mantener desempeño actual."
+
+        filas.append(fila)
+
+    return pd.DataFrame(filas)
+
+
 def construir_deduccion_final(datos, contexto_label):
     if datos.empty:
         return "No hay registros suficientes con los filtros actuales para elaborar una deducción."
@@ -712,7 +824,7 @@ with st.sidebar:
     )
 
 # =====================================================
-# VISTA 1: VISTA POR ASESOR (FILTROS EN PÁGINA PRINCIPAL)
+# VISTA 1: VISTA POR ASESOR
 # =====================================================
 if seccion == "Vista por asesor":
     st.subheader("Vista por asesor")
@@ -780,62 +892,57 @@ if seccion == "Vista por asesor":
             meses_resumen = []
             for m_val in ordenar_meses(sub_a["Mes"].unique()):
                 g_m = sub_a[sub_a["Mes"] == m_val]
-                meses_resumen.append(f"{m_val}: {fmt_pct(g_m['Puntaje final'].mean())}")
+                meses_resumen.append(f"{MESES_CORTO.get(m_val, m_val)}: {fmt_pct(g_m['Puntaje final'].mean())}")
             sub_linea = f"Prom. Total: {prom_total_a}" + (f" | {' | '.join(meses_resumen)}" if meses_resumen else "")
 
-            tot_eval = len(crit_a)
-            pct_pos = fmt_pct(crit_a["Respuesta"].isin(["si", "sí", "n/a"]).sum() / tot_eval * 100) if tot_eval else "Sin datos"
-            pct_mej = fmt_pct((crit_a["Respuesta"] == "punto de mejora").sum() / tot_eval * 100) if tot_eval else "Sin datos"
-            pct_crit = fmt_pct((crit_a["Respuesta"] == "no").sum() / tot_eval * 100) if tot_eval else "Sin datos"
+            pos_act = sintesis_dimension(ejes_a, "positivo", "Actitudinal")
+            pos_com = sintesis_dimension(ejes_a, "positivo", "Comercial")
 
-            crit_df = ejes_a[ejes_a["% Crítico_num"] > 0] if not ejes_a.empty else pd.DataFrame()
-            des_df = ejes_a[ejes_a["% Mejora_num"] > 0] if not ejes_a.empty else pd.DataFrame()
-            pos_df = ejes_a.sort_values("% Positivo_num", ascending=False) if not ejes_a.empty else pd.DataFrame()
+            crit_act = sintesis_dimension(ejes_a, "critico", "Actitudinal")
+            crit_com = sintesis_dimension(ejes_a, "critico", "Comercial")
 
-            txt_pos = "<br>".join([f"• {r['Criterio']}" for _, r in pos_df.iterrows()]) if not pos_df.empty else "• Sin puntos positivos."
-            txt_crit = "<br>".join([f"• {r['Criterio']}" for _, r in crit_df.iterrows()]) if not crit_df.empty else "• Sin puntos críticos."
-            txt_des = "<br>".join([f"• {r['Criterio']}" for _, r in des_df.iterrows()]) if not des_df.empty else "• Sin puntos a mejorar."
+            des_act = sintesis_dimension(ejes_a, "desarrollo", "Actitudinal")
+            des_com = sintesis_dimension(ejes_a, "desarrollo", "Comercial")
 
-            rec_asesor = (
-                RECOMENDACIONES_CRITERIO.get(crit_df.iloc[0]["Criterio"], "Sostener práctica guiada.")
-                if not crit_df.empty
-                else (RECOMENDACIONES_CRITERIO.get(des_df.iloc[0]["Criterio"], "Reforzar consistencia.") if not des_df.empty else "Mantener desempeño actual.")
-            )
-
-            camp_hist = (
-                sub_a.groupby("Campaña", as_index=False).agg(
-                    Calidad=("Puntaje final", "mean"),
-                    Auds=("Puntaje final", "count")
-                )
-                .sort_values("Auds", ascending=False)
-                .assign(txt=lambda d: d["Campaña"] + " (" + d["Calidad"].apply(fmt_pct) + ")")["txt"]
-                .tolist()
-            )
-            txt_camp = ", ".join(camp_hist) if camp_hist else "Sin campañas"
+            fb_txt = resumen_feedback_asesor(sub_a)
 
             with cols[col_idx]:
                 st.markdown(
-                    f'<div class="card-asesor">'
-                    f'<div class="card-asesor-titulo">{nom_asesor}</div>'
-                    f'<div class="card-asesor-sub">{sub_linea} | Auds: {len(sub_a)}</div>'
-                    f'<div style="font-size:12px; margin-bottom:8px;">'
-                    f'<b>Aspectos:</b> <span class="t-verde">Pos {pct_pos}</span> · '
-                    f'<span class="t-naranja">Mej {pct_mej}</span> · '
-                    f'<span class="t-rojo">Crit {pct_crit}</span>'
+                    f'<div class="card-compacta">'
+                    f'<div class="card-titulo">{nom_asesor}</div>'
+                    f'<div class="card-sub">{sub_linea}</div>'
+                    f'<div class="bloque-verde">'
+                    f'<div class="tit-verde">VERDE (Fortalezas)</div>'
+                    f'<div>• <b>Actitudinal:</b> {pos_act}</div>'
+                    f'<div>• <b>Comercial:</b> {pos_com}</div>'
                     f'</div>'
-                    f'<div class="sec-verde"><div class="t-verde">PUNTOS POSITIVOS</div>{txt_pos}</div>'
-                    f'<div class="sec-rojo"><div class="t-rojo">PUNTOS CRÍTICOS</div>{txt_crit}</div>'
-                    f'<div class="sec-naranja"><div class="t-naranja">PUNTOS A MEJORAR</div>{txt_des}</div>'
-                    f'<div style="font-size:12px; margin-bottom:6px;"><b>Campañas en filtro:</b> {txt_camp}</div>'
-                    f'<div style="font-size:12px;"><b>Recomendación:</b> {rec_asesor}</div>'
+                    f'<div class="bloque-rojo">'
+                    f'<div class="tit-rojo">ROJO (Crítico a Trabajar)</div>'
+                    f'<div>• <b>Actitudinal:</b> {crit_act}</div>'
+                    f'<div>• <b>Comercial:</b> {crit_com}</div>'
+                    f'</div>'
+                    f'<div class="bloque-naranja">'
+                    f'<div class="tit-naranja">NARANJA (En Desarrollo)</div>'
+                    f'<div>• <b>Actitudinal:</b> {des_act}</div>'
+                    f'<div>• <b>Comercial:</b> {des_com}</div>'
+                    f'</div>'
+                    f'<div class="bloque-feedback">'
+                    f'<div class="tit-fb">FEEDBACK / OBSERVACIONES:</div>'
+                    f'<div>{fb_txt}</div>'
+                    f'</div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
 
+    st.markdown('<div class="cuadro-comp-titulo">Cuadro comparativo de métricas y focos de desarrollo</div>', unsafe_allow_html=True)
+    meses_comp = a_meses_sel if a_meses_sel else meses_disp
+    cuadro_comp = construir_cuadro_comparativo(filtrado_ases, meses_comp)
+    mostrar_tabla(cuadro_comp)
+
     st.markdown(f'<div class="deduccion-box">{construir_deduccion_final(filtrado_ases, "Vista por asesor")}</div>', unsafe_allow_html=True)
 
 # =====================================================
-# VISTA 2: VISTA POR EMPRESA (FILTROS AÑO, MES, CAMPAÑA EN PÁGINA PRINCIPAL)
+# VISTA 2: VISTA POR EMPRESA
 # =====================================================
 elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
@@ -935,14 +1042,13 @@ elif seccion == "Vista por empresa":
 
             with cols_c[idx_c]:
                 st.markdown(
-                    f'<div class="card-asesor">'
-                    f'<div class="card-asesor-titulo">{nom_c}</div>'
-                    f'<div class="card-asesor-sub">Promedio selección: {prom_camp_sel} | Auditorías: {len(sub_c)}</div>'
-                    f'<div class="sec-verde"><div class="t-verde">PUNTOS POSITIVOS</div>{b_pos}</div>'
-                    f'<div class="sec-naranja"><div class="t-naranja">PUNTOS A MEJORAR</div>{b_mej}</div>'
-                    f'<div class="sec-rojo"><div class="t-rojo">PUNTOS CRÍTICOS</div>{b_crit}</div>'
-                    f'<div class="sec-neutro"><div class="t-neutro">EJES DE TRABAJO</div>{b_ejes}</div>'
-                    f'<div style="font-size:12px;"><b>Recomendaciones:</b> {rec_camp}</div>'
+                    f'<div class="card-compacta">'
+                    f'<div class="card-titulo">{nom_c}</div>'
+                    f'<div class="card-sub">Promedio selección: {prom_camp_sel} | Auditorías: {len(sub_c)}</div>'
+                    f'<div class="bloque-verde"><div class="tit-verde">PUNTOS POSITIVOS</div>{b_pos}</div>'
+                    f'<div class="bloque-naranja"><div class="tit-naranja">PUNTOS A MEJORAR</div>{b_mej}</div>'
+                    f'<div class="bloque-rojo"><div class="tit-rojo">PUNTOS CRÍTICOS</div>{b_crit}</div>'
+                    f'<div class="bloque-feedback"><div class="tit-fb">EJES DE TRABAJO</div>{b_ejes}<div style="margin-top:5px;"><b>Recomendaciones:</b> {rec_camp}</div></div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -950,7 +1056,7 @@ elif seccion == "Vista por empresa":
     st.markdown(f'<div class="deduccion-box">{construir_deduccion_final(base_emp, "Vista por empresa")}</div>', unsafe_allow_html=True)
 
 # =====================================================
-# VISTA 3: DETALLE POR AUDITORIA (FILTROS EN PÁGINA PRINCIPAL)
+# VISTA 3: DETALLE POR AUDITORIA
 # =====================================================
 else:
     st.subheader("Detalle por auditoria")
