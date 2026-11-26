@@ -103,17 +103,20 @@ div[data-baseweb="select"] svg {{
 }}
 
 /* Tags seleccionados en verde #30b44e con texto blanco */
+div[data-baseweb="select"] span[data-baseweb="tag"],
+div[data-baseweb="select"] div[data-baseweb="tag"],
 span[data-baseweb="tag"],
-div[data-baseweb="tag"],
-div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
+div[data-baseweb="tag"] {{
     background-color: {VERDE_PRINCIPAL} !important;
+    background: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
     border: 1px solid {VERDE_OSCURO} !important;
     border-radius: 5px !important;
 }}
+div[data-baseweb="select"] span[data-baseweb="tag"] *,
+div[data-baseweb="select"] div[data-baseweb="tag"] *,
 span[data-baseweb="tag"] *,
-div[data-baseweb="tag"] *,
-div[data-testid="stMultiSelect"] span[data-baseweb="tag"] * {{
+div[data-baseweb="tag"] * {{
     background-color: transparent !important;
     color: #ffffff !important;
     fill: #ffffff !important;
@@ -228,7 +231,7 @@ ul[role="listbox"] div,
 .tit-naranja {{ color: #b45309; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-fb {{ color: #0f172a; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 
-/* Cuadro comparativo con visualización completa del texto */
+/* Cuadro comparativo con nombre legible y focos completos */
 .cuadro-comp-titulo {{
     font-size: 15px;
     font-weight: 800;
@@ -264,25 +267,63 @@ table.tabla-comp td {{
     padding: 8px 10px;
     border: 1px solid #e2e8f0;
     vertical-align: top;
-    white-space: normal;
-    word-break: break-word;
     line-height: 1.35;
     color: #000000;
+}}
+table.tabla-comp td.col-asesor {{
+    min-width: 210px;
+    white-space: nowrap;
+    font-weight: 700;
+    color: #0f172a;
+}}
+table.tabla-comp td.col-foco {{
+    min-width: 260px;
+    white-space: normal;
+    overflow-wrap: break-word;
 }}
 table.tabla-comp tr:nth-child(even) td {{
     background-color: #f8fafc;
 }}
 
+/* Deducción final analítica */
 .deduccion-box {{
     background: #ffffff;
-    border: 1px solid #86efac;
+    border: 1px solid #cbd5e1;
     border-left: 6px solid {VERDE_OSCURO};
     border-radius: 8px;
-    padding: 14px 16px;
+    padding: 16px 18px;
     margin-top: 12px;
     margin-bottom: 16px;
     color: #000000;
     font-size: 13px;
+    line-height: 1.45;
+}}
+.deduccion-titulo {{
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #14532d;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}}
+.ded-pos {{
+    background: #eaf7ed;
+    border-left: 4px solid {VERDE_PRINCIPAL};
+    padding: 8px 11px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}}
+.ded-alert {{
+    background: #fef2f2;
+    border-left: 4px solid {ROJO_CRITICO};
+    padding: 8px 11px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}}
+.ded-rec {{
+    background: #f0fdf4;
+    border-left: 4px solid #15803d;
+    padding: 8px 11px;
+    border-radius: 4px;
 }}
 .comentario-card {{
     background: #ffffff;
@@ -440,6 +481,15 @@ RECOMENDACIONES_CRITERIO = {
 # =====================================================
 def limpiar_texto_etiqueta(valor):
     return " ".join(str(valor).split()).strip()
+
+
+def formatear_nombre_recurso(nombre):
+    limpio = limpiar_texto_etiqueta(nombre)
+    if "," in limpio:
+        partes = [p.strip() for p in limpio.split(",", 1)]
+        if len(partes) == 2 and partes[1]:
+            return f"{partes[0]}, {partes[1]}"
+    return limpio
 
 
 def normalizar_clave(valor):
@@ -749,8 +799,6 @@ def sintesis_dimension(ejes_df, modo, dimension):
 
 
 def resumen_feedback_comercial_consolidado(sub_a, ejes_a):
-    """Analiza todas las observaciones, puntos a trabajar y criterios del recurso
-    y devuelve un feedback comercial consolidado y acotado."""
     obs_all = [
         limpiar_texto_etiqueta(o)
         for o in sub_a["Observaciones"]
@@ -805,7 +853,7 @@ def construir_cuadro_comparativo(filtrado_ases, meses_activos):
         crit_a = construir_detalle_criterios(sub_a)
         ejes_a = resumen_ejes_criterios(crit_a)
 
-        fila = {"Asesor": nom_asesor}
+        fila = {"Asesor": formatear_nombre_recurso(nom_asesor)}
         proms_mes = []
         for m in meses_ord:
             g_m = sub_a[sub_a["Mes"] == m]["Puntaje final"].mean()
@@ -845,8 +893,15 @@ def render_tabla_completa_html(df_tabla):
     headers_html = "".join([f"<th>{col}</th>" for col in df_tabla.columns])
     rows_html = []
     for _, r in df_tabla.iterrows():
-        celdas = "".join([f"<td>{r[col]}</td>" for col in df_tabla.columns])
-        rows_html.append(f"<tr>{celdas}</tr>")
+        celdas = []
+        for col in df_tabla.columns:
+            if col == "Asesor":
+                celdas.append(f'<td class="col-asesor">{r[col]}</td>')
+            elif col == "Foco principal de desarrollo":
+                celdas.append(f'<td class="col-foco">{r[col]}</td>')
+            else:
+                celdas.append(f"<td>{r[col]}</td>")
+        rows_html.append(f"<tr>{''.join(celdas)}</tr>")
     st.markdown(
         f'<div class="tabla-comp-wrap"><table class="tabla-comp">'
         f'<thead><tr>{headers_html}</tr></thead>'
@@ -856,40 +911,87 @@ def render_tabla_completa_html(df_tabla):
     )
 
 
-def construir_deduccion_final(datos, contexto_label):
+def construir_deduccion_analitica_html(datos, contexto_label):
     if datos.empty:
-        return "No hay registros suficientes con los filtros actuales para elaborar una deducción."
+        return (
+            f'<div class="deduccion-box">'
+            f'<div class="deduccion-titulo">Deducción final — {contexto_label}</div>'
+            f'<div>No hay registros suficientes con los filtros actuales para elaborar una deducción.</div>'
+            f'</div>'
+        )
 
     prom_gral = fmt_pct(datos["Puntaje final"].mean())
     total_aud = len(datos)
+    n_ases = datos["Asesor"].nunique()
+    n_camp = datos["Campaña"].nunique()
+
     crit_df_all = construir_detalle_criterios(datos)
     ejes = resumen_ejes_criterios(crit_df_all)
 
+    # Buenas energías / puntos positivos
+    mejores_ejes = ejes.sort_values(["% Positivo_num", "Evaluaciones"], ascending=[False, False]).head(2) if not ejes.empty else pd.DataFrame()
+    top_ases = (
+        datos.groupby("Asesor", as_index=False)["Puntaje final"]
+        .mean()
+        .sort_values("Puntaje final", ascending=False)
+    )
+    mejor_ases_txt = ""
+    if not top_ases.empty:
+        mejor_ases_txt = f" Destaca <b>{formatear_nombre_recurso(top_ases.iloc[0]['Asesor'])}</b> ({fmt_pct(top_ases.iloc[0]['Puntaje final'])})."
+
+    if not mejores_ejes.empty:
+        ejes_pos_txt = " y ".join([f"<b>{r['Criterio']}</b> ({r['% Positivo']})" for _, r in mejores_ejes.iterrows()])
+        buenas_energias = (
+            f"<b>¡Muy buen impulso!</b> Sobre <b>{total_aud}</b> auditorías ({n_ases} asesor(es) / {n_camp} campaña(s)), "
+            f"el promedio general alcanza <b>{prom_gral}</b>, con fuerte tracción positiva en {ejes_pos_txt}.{mejor_ases_txt}"
+        )
+    else:
+        buenas_energias = (
+            f"<b>¡Buen avance!</b> Se analizan <b>{total_aud}</b> auditorías con un promedio general de <b>{prom_gral}</b>.{mejor_ases_txt}"
+        )
+
+    # Alertas
+    alertas = []
     top_crit = ejes[ejes["Estado"] == "Crítico"] if not ejes.empty else pd.DataFrame()
     top_mej = ejes[ejes["Estado"] == "A mejorar"] if not ejes.empty else pd.DataFrame()
-
     if not top_crit.empty:
-        foco_crit = f"El mayor foco crítico es <b>{top_crit.iloc[0]['Criterio']}</b> ({top_crit.iloc[0]['Dimensión']})."
-        accion_sug = RECOMENDACIONES_CRITERIO.get(top_crit.iloc[0]["Criterio"], "Reforzar capacitación focalizada.")
+        alertas.append(f"Criterio crítico principal: <b>{top_crit.iloc[0]['Criterio']}</b> ({top_crit.iloc[0]['% Crítico']} crítico).")
     elif not top_mej.empty:
-        foco_crit = f"El principal aspecto a mejorar es <b>{top_mej.iloc[0]['Criterio']}</b> ({top_mej.iloc[0]['Dimensión']})."
-        accion_sug = RECOMENDACIONES_CRITERIO.get(top_mej.iloc[0]["Criterio"], "Sostener coaching y monitoreo.")
-    else:
-        foco_crit = "No se detectan desvíos críticos ni puntos de mejora relevantes en el período filtrado."
-        accion_sug = "Mantener el estándar actual de calidad y calibración."
+        alertas.append(f"Aspecto a reforzar: <b>{top_mej.iloc[0]['Criterio']}</b> ({top_mej.iloc[0]['% Mejora']} en mejora).")
+
+    if len(top_ases) >= 2:
+        menor_a = top_ases.iloc[-1]
+        if float(menor_a["Puntaje final"]) < 70:
+            alertas.append(f"Menor promedio del filtro en <b>{formatear_nombre_recurso(menor_a['Asesor'])}</b> ({fmt_pct(menor_a['Puntaje final'])}).")
 
     res_camp = datos.groupby("Campaña", as_index=False)["Puntaje final"].mean().sort_values("Puntaje final", ascending=False)
-    if not res_camp.empty:
-        mejor_c = f"{res_camp.iloc[0]['Campaña']} ({fmt_pct(res_camp.iloc[0]['Puntaje final'])})"
-        menor_c = f"{res_camp.iloc[-1]['Campaña']} ({fmt_pct(res_camp.iloc[-1]['Puntaje final'])})"
-        texto_camp = f"Campaña con mayor calidad: <b>{mejor_c}</b>; campaña con menor promedio: <b>{menor_c}</b>."
-    else:
-        texto_camp = ""
+    if len(res_camp) >= 2:
+        menor_c = res_camp.iloc[-1]
+        alertas.append(f"Campaña con menor calidad en selección: <b>{menor_c['Campaña']}</b> ({fmt_pct(menor_c['Puntaje final'])}).")
+
+    if not alertas:
+        alertas.append("Sin alertas críticas de puntaje o criterio en los registros filtrados.")
+
+    alerta_html = "Alerta: " + " | ".join(alertas)
+
+    # Recomendación general
+    foco_rec = (
+        top_crit.iloc[0]["Criterio"] if not top_crit.empty
+        else (top_mej.iloc[0]["Criterio"] if not top_mej.empty else None)
+    )
+    rec_base = RECOMENDACIONES_CRITERIO.get(
+        foco_rec,
+        "Sostener calibración periódica, compartir buenas prácticas de los perfiles más altos y hacer seguimiento semanal."
+    )
+    rec_html = f"<b>Recomendación general:</b> {rec_base}"
 
     return (
-        f"<b>Deducción final ({contexto_label}):</b> Sobre <b>{total_aud}</b> auditorías analizadas, "
-        f"la calidad promedio es <b>{prom_gral}</b>. {texto_camp} {foco_crit} "
-        f"<b>Acción recomendada:</b> {accion_sug}"
+        f'<div class="deduccion-box">'
+        f'<div class="deduccion-titulo">Deducción final — {contexto_label}</div>'
+        f'<div class="ded-pos">{buenas_energias}</div>'
+        f'<div class="ded-alert">{alerta_html}</div>'
+        f'<div class="ded-rec">{rec_html}</div>'
+        f'</div>'
     )
 
 
@@ -931,7 +1033,14 @@ with st.sidebar:
 if seccion == "Vista por asesor":
     st.subheader("Vista por asesor")
 
-    f1, f2, f3, f4 = st.columns(4)
+    if st.session_state.get("reset_va", False):
+        st.session_state["va_anio"] = años_disp
+        st.session_state["va_mes"] = meses_disp
+        st.session_state["va_camp"] = camp_disp
+        st.session_state["va_ases"] = ases_disp
+        st.session_state["reset_va"] = False
+
+    f1, f2, f3, f4, f5 = st.columns([1.2, 1.5, 1.8, 1.8, 1.1])
     with f1:
         a_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="va_anio")
     with f2:
@@ -950,6 +1059,11 @@ if seccion == "Vista por asesor":
 
     with f4:
         a_ases_sel = st.multiselect("Asesor", options=ases_disp_va, default=ases_disp_va, key="va_ases")
+    with f5:
+        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+        if st.button("Limpiar filtros", key="btn_limpiar_va", use_container_width=True):
+            st.session_state["reset_va"] = True
+            st.rerun()
 
     todos_a_anios = (set(a_anios_sel) == set(años_disp)) if años_disp else True
     todos_a_meses = (set(a_meses_sel) == set(meses_disp)) if meses_disp else True
@@ -1007,11 +1121,12 @@ if seccion == "Vista por asesor":
             des_com = sintesis_dimension(ejes_a, "desarrollo", "Comercial")
 
             fb_txt = resumen_feedback_comercial_consolidado(sub_a, ejes_a)
+            nombre_card = formatear_nombre_recurso(nom_asesor)
 
             with cols[col_idx]:
                 st.markdown(
                     f'<div class="card-compacta">'
-                    f'<div class="card-titulo">{nom_asesor}</div>'
+                    f'<div class="card-titulo">{nombre_card}</div>'
                     f'<div class="card-sub">{sub_linea}</div>'
                     f'<div class="bloque-verde">'
                     f'<div class="tit-verde">VERDE (Fortalezas)</div>'
@@ -1041,7 +1156,7 @@ if seccion == "Vista por asesor":
     cuadro_comp = construir_cuadro_comparativo(filtrado_ases, meses_comp)
     render_tabla_completa_html(cuadro_comp)
 
-    st.markdown(f'<div class="deduccion-box">{construir_deduccion_final(filtrado_ases, "Vista por asesor")}</div>', unsafe_allow_html=True)
+    st.markdown(construir_deduccion_analitica_html(filtrado_ases, "Vista por asesor"), unsafe_allow_html=True)
 
 # =====================================================
 # VISTA 2: VISTA POR EMPRESA
@@ -1049,13 +1164,24 @@ if seccion == "Vista por asesor":
 elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
 
-    fe1, fe2, fe3 = st.columns(3)
+    if st.session_state.get("reset_ve", False):
+        st.session_state["ve_anio"] = años_disp
+        st.session_state["ve_mes"] = meses_disp
+        st.session_state["ve_camp"] = camp_disp
+        st.session_state["reset_ve"] = False
+
+    fe1, fe2, fe3, fe4 = st.columns([1.3, 1.6, 2.0, 1.1])
     with fe1:
         e_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="ve_anio")
     with fe2:
         e_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ve_mes")
     with fe3:
         e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ve_camp")
+    with fe4:
+        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+        if st.button("Limpiar filtros", key="btn_limpiar_ve", use_container_width=True):
+            st.session_state["reset_ve"] = True
+            st.rerun()
 
     todos_e_anios = (set(e_anios_sel) == set(años_disp)) if años_disp else True
     todos_e_meses = (set(e_meses_sel) == set(meses_disp)) if meses_disp else True
@@ -1107,7 +1233,7 @@ elif seccion == "Vista por empresa":
     else:
         mostrar_tabla(pd.DataFrame(columns=["Año", "Mes", "Auditorías", "Calidad"]))
 
-    st.markdown(f'<div class="deduccion-box">{construir_deduccion_final(base_emp, "Vista por empresa")}</div>', unsafe_allow_html=True)
+    st.markdown(construir_deduccion_analitica_html(base_emp, "Vista por empresa"), unsafe_allow_html=True)
 
 # =====================================================
 # VISTA 3: DETALLE POR AUDITORIA
@@ -1115,7 +1241,14 @@ elif seccion == "Vista por empresa":
 else:
     st.subheader("Detalle por auditoria")
 
-    fd1, fd2, fd3, fd4 = st.columns(4)
+    if st.session_state.get("reset_da", False):
+        st.session_state["da_anio"] = años_disp
+        st.session_state["da_mes"] = meses_disp
+        st.session_state["da_camp"] = camp_disp
+        st.session_state["da_ases"] = ases_disp
+        st.session_state["reset_da"] = False
+
+    fd1, fd2, fd3, fd4, fd5 = st.columns([1.2, 1.5, 1.8, 1.8, 1.1])
     with fd1:
         d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
     with fd2:
@@ -1124,6 +1257,11 @@ else:
         d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
     with fd4:
         d_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="da_ases")
+    with fd5:
+        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+        if st.button("Limpiar filtros", key="btn_limpiar_da", use_container_width=True):
+            st.session_state["reset_da"] = True
+            st.rerun()
 
     todos_d_anios = (set(d_anios_sel) == set(años_disp)) if años_disp else True
     todos_d_meses = (set(d_meses_sel) == set(meses_disp)) if meses_disp else True
@@ -1165,7 +1303,7 @@ else:
         for _, fila_d in con_comentarios.iterrows():
             st.markdown(
                 f'<div class="comentario-card">'
-                f'<b>{fila_d["Asesor"]}</b> — {fila_d["Campaña"]} ({fila_d["Fecha_str"]} | {fila_d["Año"]} - {fila_d["Mes"]} | Calidad: {fila_d["Calidad"]})<br>'
+                f'<b>{formatear_nombre_recurso(fila_d["Asesor"])}</b> — {fila_d["Campaña"]} ({fila_d["Fecha_str"]} | {fila_d["Año"]} - {fila_d["Mes"]} | Calidad: {fila_d["Calidad"]})<br>'
                 f'<b>Puntos a trabajar:</b> {fila_d["Puntos a trabajar"] if fila_d["Puntos a trabajar"] else "Sin registro"}<br>'
                 f'<b>Observaciones:</b> {fila_d["Observaciones"] if fila_d["Observaciones"] else "Sin registro"}'
                 f'</div>',
@@ -1180,7 +1318,7 @@ else:
         mime="text/csv"
     )
 
-    st.markdown(f'<div class="deduccion-box">{construir_deduccion_final(filtrado_det, "Detalle por auditoria")}</div>', unsafe_allow_html=True)
+    st.markdown(construir_deduccion_analitica_html(filtrado_det, "Detalle por auditoria"), unsafe_allow_html=True)
 
 # =====================================================
 # PIE Y ACTUALIZACIÓN
