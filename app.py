@@ -113,9 +113,80 @@ div[data-baseweb="select"] input {{
     color: #000000 !important;
     min-width: 90px !important;
 }}
+
+/* Flechita del desplegable bien visible en todos los filtros */
+div[data-baseweb="select"] [data-testid="stSelectboxVirtualDropdown"],
 div[data-baseweb="select"] svg {{
     fill: #0f172a !important;
     color: #0f172a !important;
+    stroke: #0f172a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}}
+
+/* Contenedor de íconos derechos del select (clear 'x' y flechita desplegable) */
+div[data-baseweb="select"] > div > div:last-child {{
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding-right: 6px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}}
+
+/* Botón 'x' general para borrar selecciones del filtro: alto contraste */
+div[data-baseweb="select"] [aria-label="Clear all"],
+div[data-baseweb="select"] [title="Clear all"],
+div[data-baseweb="select"] div[role="button"] {{
+    background-color: #e2e8f0 !important;
+    border: 1px solid #64748b !important;
+    border-radius: 999px !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}}
+div[data-baseweb="select"] [aria-label="Clear all"] svg,
+div[data-baseweb="select"] [title="Clear all"] svg,
+div[data-baseweb="select"] div[role="button"] svg {{
+    width: 14px !important;
+    height: 14px !important;
+    color: #0f172a !important;
+    fill: #0f172a !important;
+    stroke: #0f172a !important;
+    stroke-width: 2.5px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}}
+div[data-baseweb="select"] [aria-label="Clear all"]:hover,
+div[data-baseweb="select"] [title="Clear all"]:hover,
+div[data-baseweb="select"] div[role="button"]:hover {{
+    background-color: {VERDE_PRINCIPAL} !important;
+    border-color: {VERDE_OSCURO} !important;
+}}
+div[data-baseweb="select"] [aria-label="Clear all"]:hover svg,
+div[data-baseweb="select"] [title="Clear all"]:hover svg,
+div[data-baseweb="select"] div[role="button"]:hover svg {{
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+}}
+
+/* Flechita indicadora del desplegable (último svg o indicador de apertura) */
+div[data-baseweb="select"] > div > div:last-child svg {{
+    width: 18px !important;
+    height: 18px !important;
+    color: #0f172a !important;
+    fill: #0f172a !important;
+    stroke: #0f172a !important;
+    stroke-width: 2.4px !important;
     opacity: 1 !important;
     visibility: visible !important;
 }}
@@ -159,6 +230,9 @@ div[data-baseweb="tag"] svg {{
     color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
+    stroke-width: 2.5px !important;
+    width: 14px !important;
+    height: 14px !important;
     opacity: 1 !important;
     visibility: visible !important;
     cursor: pointer !important;
