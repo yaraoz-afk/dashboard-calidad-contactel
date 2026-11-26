@@ -641,13 +641,13 @@ def parsear_fecha_segura(serie):
     return resultado
 
 
-def extraer_anio_seguro(fecha_dt, mes_raw):
+def extraer_anio_seguro(fecha_dt, mes_raw, fecha_raw):
     if pd.notna(fecha_dt):
         return str(int(fecha_dt.year))
-    texto_mes = str(mes_raw)
-    for anio_cand in ("2024", "2025", "2026", "2027"):
-        if anio_cand in texto_mes:
-            return anio_cand
+    for texto in (str(fecha_raw), str(mes_raw)):
+        for anio_cand in ("2024", "2025", "2026", "2027"):
+            if anio_cand in texto:
+                return anio_cand
     return "Sin año"
 
 
@@ -674,7 +674,7 @@ def calcular_puntaje(fila):
 
 
 @st.cache_data(ttl=300)
-def leer_mediciones():
+def leer_mediciones_crudo_y_procesado():
     bruto = pd.read_csv(
         URL_MEDICION,
         header=None,
@@ -683,11 +683,12 @@ def leer_mediciones():
         engine="python"
     )
 
-    if bruto.shape[1] < 33:
-        for _ in range(33 - bruto.shape[1]):
+    n_cols_esperadas = 33
+    if bruto.shape[1] < n_cols_esperadas:
+        for _ in range(n_cols_esperadas - bruto.shape[1]):
             bruto[bruto.shape[1]] = ""
 
-    datos = bruto.iloc[9:, :33].copy()
+    datos = bruto.iloc[9:, :n_cols_esperadas].copy()
     datos.columns = (
         ["Fecha", "Mes_raw", "Asesor", "Campaña", "ID",
          "Duración", "Tipo de gestión", "Tipificación"]
@@ -699,6 +700,8 @@ def leer_mediciones():
 
     for col in datos.columns:
         datos[col] = datos[col].apply(limpiar_texto_etiqueta)
+
+    datos["Fecha_raw"] = datos["Fecha"]
 
     datos = datos[
         (datos["Asesor"] != "") | (datos["Campaña"] != "")
@@ -721,13 +724,13 @@ def leer_mediciones():
     datos["Mes_orden"] = datos["Mes"].map(lambda m: ORDEN_MESES.get(m, 99))
 
     datos["Año"] = [
-        extraer_anio_seguro(f_dt, m_raw)
-        for f_dt, m_raw in zip(datos["Fecha"], datos["Mes_raw"])
+        extraer_anio_seguro(f_dt, m_raw, f_raw)
+        for f_dt, m_raw, f_raw in zip(datos["Fecha"], datos["Mes_raw"], datos["Fecha_raw"])
     ]
     datos["Campaña_key"] = datos["Campaña"].apply(normalizar_clave)
     datos["Asesor_key"] = datos["Asesor"].apply(normalizar_clave)
 
-    return datos
+    return bruto, datos
 
 
 def construir_detalle_criterios(datos):
@@ -862,10 +865,6 @@ def filtrar_registros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
 
 
 def preparar_selector_asesor(key_asesor, key_firma, firma_actual, ases_opciones):
-    """
-    Actualiza los asesores seleccionados cuando cambia Año, Mes o Campaña,
-    pero permite al usuario modificar o borrar asesores libremente dentro del mismo filtro.
-    """
     firma_anterior = st.session_state.get(key_firma)
     if key_asesor not in st.session_state or firma_anterior != firma_actual:
         st.session_state[key_asesor] = list(ases_opciones)
@@ -1092,7 +1091,7 @@ def construir_deduccion_analitica_html(datos, contexto_label):
 # CARGA DE DATOS
 # =====================================================
 try:
-    df = leer_mediciones()
+    df_crudo, df = leer_mediciones_crudo_y_procesado()
 except Exception as error:
     st.error("No se pudieron cargar los datos desde Google Sheets.")
     st.exception(error)
@@ -1106,6 +1105,8 @@ años_disp = sorted([a for a in df["Año"].dropna().unique() if a != "Sin año"]
 if "Sin año" in df["Año"].unique():
     años_disp.append("Sin año")
 meses_disp = ordenar_meses(df["Mes"].dropna().unique())
+if "Sin mes" in df["Mes"].unique():
+    meses_disp.append("Sin mes")
 camp_disp = sorted(df["Campaña"].dropna().unique())
 ases_disp = sorted(df["Asesor"].dropna().unique())
 
@@ -1376,6 +1377,18 @@ else:
     )
 
     st.markdown(construir_deduccion_analitica_html(filtrado_det, "Detalle por auditoria"), unsafe_allow_html=True)
+
+# =====================================================
+# DIAGNÓSTICO DE LECTURA DEL SHEET (PARA REVISAR CAMPAÑAS)
+# =====================================================
+with st.expander("Diagnóstico de campañas y fechas en el Sheet"):
+    resumen_camp_diag = df.groupby(["Campaña", "Año", "Mes"], as_index=False).agg(
+        Filas=("Asesor", "count"),
+        Fechas_raw_muestra=("Fecha_raw", lambda s: ", ".join(sorted({x for x in s if x})[:3])),
+        Mes_raw_muestra=("Mes_raw", lambda s: ", ".join(sorted({x for x in s if x})[:3]))
+    ).sort_values(["Campaña", "Año", "Mes"])
+    st.caption(f"Filas CSV crudas: {len(df_crudo)} | Columnas CSV crudas: {df_crudo.shape[1]} | Registros cargados desde fila 10: {len(df)}")
+    st.dataframe(resumen_camp_diag, use_container_width=True, hide_index=True)
 
 # =====================================================
 # PIE Y ACTUALIZACIÓN
