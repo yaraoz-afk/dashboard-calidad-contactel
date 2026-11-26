@@ -247,15 +247,23 @@ ul[role="listbox"] div,
     color: #ffffff !important;
 }}
 
-/* Tarjeta compacta por asesor */
+/* Tarjeta compacta por asesor (interactiva con doble clic) */
 .card-compacta {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-top: 4px solid #475569;
     border-radius: 6px;
     padding: 12px 14px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     color: #0f172a;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}}
+.card-compacta:hover {{
+    border-color: {VERDE_PRINCIPAL};
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
 }}
 .card-titulo {{
     font-size: 15px;
@@ -273,6 +281,13 @@ ul[role="listbox"] div,
     margin-bottom: 10px;
     padding-bottom: 7px;
     border-bottom: 1px solid #e2e8f0;
+}}
+.card-hint {{
+    font-size: 10.5px;
+    color: #64748b;
+    text-align: right;
+    margin-top: 6px;
+    font-style: italic;
 }}
 .bloque-verde {{
     background: #f0fdf4;
@@ -759,15 +774,6 @@ table.det-aud td.td-bloque {{
     border-left: 3px solid #64748b;
     padding: 8px 11px;
     border-radius: 4px;
-}}
-.comentario-card {{
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-left: 4px solid {VERDE_PRINCIPAL};
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    font-size: 13px;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -1266,6 +1272,85 @@ def render_detalle_auditoria_pdf_html(df_det_items):
     )
 
     render_controles_scroll_auditoria()
+
+
+def render_tarjeta_doble_clic(card_id, html_tarjeta):
+    """Renderiza una tarjeta HTML interactiva que abre el pop-up al hacer doble clic."""
+    html_escapado = (
+        html_tarjeta
+        .replace("\\", "\\\\")
+        .replace("`", "\\`")
+        .replace("${", "\\${")
+    )
+    components.html(
+        f"""
+        <div id="wrap_{card_id}" style="width:100%;"></div>
+        <script>
+        (function() {{
+            const mount = document.getElementById("wrap_{card_id}");
+            mount.innerHTML = `{html_escapado}`;
+            const card = mount.querySelector(".card-compacta");
+            if (card) {{
+                card.addEventListener("dblclick", function() {{
+                    const url = new URL(window.parent.location.href);
+                    url.searchParams.set("popup_asesor", "{card_id}");
+                    url.searchParams.set("_t", Date.now().toString());
+                    window.parent.history.replaceState({{}}, "", url.toString());
+                    window.parent.location.href = url.toString();
+                }});
+            }}
+            function ajustarAltura() {{
+                const h = document.documentElement.scrollHeight;
+                if (window.frameElement && h > 0) {{
+                    window.frameElement.style.height = (h + 6) + "px";
+                }}
+            }}
+            ajustarAltura();
+            window.addEventListener("resize", ajustarAltura);
+        }})();
+        </script>
+        """,
+        height=390
+    )
+
+
+def mostrar_contenido_popup_auditorias(df_recurso, nombre_recurso):
+    prom_r = fmt_pct(df_recurso["Puntaje final"].mean()) if not df_recurso.empty else "Sin datos"
+    st.caption(
+        f"Recurso: **{nombre_recurso}** | Auditorías en filtro: **{len(df_recurso)}** | Promedio: **{prom_r}**"
+    )
+    if df_recurso.empty:
+        st.info("No hay auditorías para este recurso con los filtros actuales.")
+    else:
+        df_det_r = construir_df_detalle_items(df_recurso)
+        render_detalle_auditoria_pdf_html(df_det_r)
+        csv_r = df_det_r.to_csv(index=False, sep=";", encoding="utf-8-sig")
+        st.download_button(
+            "Descargar auditorías de este recurso (CSV)",
+            data=csv_r,
+            file_name=f"auditorias_{normalizar_clave(nombre_recurso).replace(' ', '_')}.csv",
+            mime="text/csv",
+            key="dl_popup_asesor"
+        )
+
+    if st.button("Cerrar ventana", key="btn_cerrar_popup_asesor"):
+        st.session_state["asesor_popup_activo"] = None
+        if "popup_asesor" in st.query_params:
+            del st.query_params["popup_asesor"]
+        if "_t" in st.query_params:
+            del st.query_params["_t"]
+        st.rerun()
+
+
+if hasattr(st, "dialog"):
+    @st.dialog("Detalle de auditorías por recurso", width="large")
+    def popup_auditorias_asesor(df_recurso, nombre_recurso):
+        mostrar_contenido_popup_auditorias(df_recurso, nombre_recurso)
+else:
+    def popup_auditorias_asesor(df_recurso, nombre_recurso):
+        with st.container(border=True):
+            st.markdown("### Detalle de auditorías por recurso")
+            mostrar_contenido_popup_auditorias(df_recurso, nombre_recurso)
 
 
 @st.cache_data(ttl=300)
@@ -1895,6 +1980,14 @@ if seccion == "Vista por asesor":
     detalle_ases = construir_detalle_criterios(filtrado_ases)
     asesores_a_mostrar = sorted(filtrado_ases["Asesor"].unique())
 
+    mapa_slug_asesor = {
+        re.sub(r"[^a-z0-9]+", "_", normalizar_clave(nom)).strip("_"): nom
+        for nom in asesores_a_mostrar
+    }
+    slug_qp = st.query_params.get("popup_asesor")
+    if slug_qp and slug_qp in mapa_slug_asesor:
+        st.session_state["asesor_popup_activo"] = mapa_slug_asesor[slug_qp]
+
     for idx_inicio in range(0, len(asesores_a_mostrar), 3):
         grupo = asesores_a_mostrar[idx_inicio:idx_inicio + 3]
         cols = st.columns(len(grupo))
@@ -1917,31 +2010,55 @@ if seccion == "Vista por asesor":
 
             fb_txt = resumen_feedback_comercial_consolidado(sub_a, ejes_a)
             nombre_card = formatear_nombre_recurso(nom_asesor)
+            slug_card = re.sub(r"[^a-z0-9]+", "_", normalizar_clave(nom_asesor)).strip("_")
+
+            html_card = (
+                f'<style>'
+                f'* {{ box-sizing: border-box; font-family: "Source Sans Pro", sans-serif; color: #0f172a; }}'
+                f'.card-compacta {{ background: #ffffff; border: 1px solid #cbd5e1; border-top: 4px solid #475569; border-radius: 6px; padding: 12px 14px; cursor: pointer; user-select: none; }}'
+                f'.card-compacta:hover {{ border-color: {VERDE_PRINCIPAL}; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08); }}'
+                f'.card-titulo {{ font-size: 15px; font-weight: 800; text-align: center; color: #0f172a; margin-bottom: 3px; text-transform: uppercase; }}'
+                f'.card-sub {{ font-size: 11.5px; font-weight: 600; text-align: center; color: #475569; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid #e2e8f0; }}'
+                f'.bloque-verde {{ background: #f0fdf4; border-left: 3px solid {VERDE_PRINCIPAL}; padding: 7px 9px; margin-bottom: 7px; font-size: 12px; line-height: 1.35; }}'
+                f'.bloque-rojo {{ background: #fef2f2; border-left: 3px solid {ROJO_CRITICO}; padding: 7px 9px; margin-bottom: 7px; font-size: 12px; line-height: 1.35; }}'
+                f'.bloque-naranja {{ background: #fffbeb; border-left: 3px solid #d97706; padding: 7px 9px; margin-bottom: 7px; font-size: 12px; line-height: 1.35; }}'
+                f'.bloque-feedback {{ background: #f8fafc; border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 4px; font-size: 12px; line-height: 1.35; }}'
+                f'.tit-verde {{ color: #166534; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}'
+                f'.tit-rojo {{ color: #991b1b; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}'
+                f'.tit-naranja {{ color: #92400e; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}'
+                f'.tit-fb {{ color: #1e293b; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}'
+                f'.card-hint {{ font-size: 10.5px; color: #64748b; text-align: right; margin-top: 6px; font-style: italic; }}'
+                f'</style>'
+                f'<div class="card-compacta">'
+                f'<div class="card-titulo">{nombre_card}</div>'
+                f'<div class="card-sub">{sub_linea}</div>'
+                f'<div class="bloque-verde">'
+                f'<div class="tit-verde">Fortalezas</div>'
+                f'<div>{fortalezas_txt}</div>'
+                f'</div>'
+                f'<div class="bloque-naranja">'
+                f'<div class="tit-naranja">Puntos de mejora</div>'
+                f'<div>{mejoras_txt}</div>'
+                f'</div>'
+                f'<div class="bloque-rojo">'
+                f'<div class="tit-rojo">Críticos</div>'
+                f'<div>{criticos_txt}</div>'
+                f'</div>'
+                f'<div class="bloque-feedback">'
+                f'<div class="tit-fb">FEEDBACK / OBSERVACIONES:</div>'
+                f'<div>{fb_txt}</div>'
+                f'</div>'
+                f'<div class="card-hint">Doble clic para ver auditorías</div>'
+                f'</div>'
+            )
 
             with cols[col_idx]:
-                st.markdown(
-                    f'<div class="card-compacta">'
-                    f'<div class="card-titulo">{nombre_card}</div>'
-                    f'<div class="card-sub">{sub_linea}</div>'
-                    f'<div class="bloque-verde">'
-                    f'<div class="tit-verde">Fortalezas</div>'
-                    f'<div>{fortalezas_txt}</div>'
-                    f'</div>'
-                    f'<div class="bloque-naranja">'
-                    f'<div class="tit-naranja">Puntos de mejora</div>'
-                    f'<div>{mejoras_txt}</div>'
-                    f'</div>'
-                    f'<div class="bloque-rojo">'
-                    f'<div class="tit-rojo">Críticos</div>'
-                    f'<div>{criticos_txt}</div>'
-                    f'</div>'
-                    f'<div class="bloque-feedback">'
-                    f'<div class="tit-fb">FEEDBACK / OBSERVACIONES:</div>'
-                    f'<div>{fb_txt}</div>'
-                    f'</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+                render_tarjeta_doble_clic(slug_card, html_card)
+
+    asesor_popup = st.session_state.get("asesor_popup_activo")
+    if asesor_popup:
+        df_pop = filtrado_ases[filtrado_ases["Asesor"] == asesor_popup].copy()
+        popup_auditorias_asesor(df_pop, formatear_nombre_recurso(asesor_popup))
 
     st.markdown('<div class="cuadro-comp-titulo">Cuadro comparativo de métricas y focos de desarrollo</div>', unsafe_allow_html=True)
     meses_comp = a_meses_sel if a_meses_sel else meses_disp
