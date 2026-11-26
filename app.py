@@ -827,12 +827,14 @@ table.det-aud td.td-bloque {{
 """, unsafe_allow_html=True)
 
 
-def obtener_logo_contactel_uri():
-    """Devuelve data URI del logo local si existe, o el logo Contactel de marca en base64."""
+def render_logo_contactel_sidebar():
+    """Muestra el archivo real del logo subido al repositorio dentro del menú de vistas."""
     base_dir = Path(__file__).resolve().parent
     candidatos = [
+        base_dir / "LOGO Contactel-01 (2).png",
         base_dir / "logo_contactel.png",
         base_dir / "LOGO Contactel-01.png",
+        base_dir / "assets" / "LOGO Contactel-01 (2).png",
         base_dir / "assets" / "logo_contactel.png",
         base_dir / "assets" / "LOGO Contactel-01.png",
     ]
@@ -841,43 +843,15 @@ def obtener_logo_contactel_uri():
             try:
                 raw = ruta.read_bytes()
                 b64 = base64.b64encode(raw).decode("ascii")
-                return f"data:image/png;base64,{b64}"
+                st.markdown(
+                    f'<div class="sidebar-brand-wrap">'
+                    f'<img src="data:image/png;base64,{b64}" alt="Logo Contactel" class="sidebar-brand-logo"/>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+                return
             except OSError:
                 break
-
-    # Logo Contactel incrustado directamente para no depender de archivos externos en el servidor
-    logo_b64 = (
-        "iVBORw0KGgoAAAANSUhEUgAAAlgAAAGQCAYAAAByNR6YAAAA"
-    )
-    # Si el string embebido es corto, devolvemos None para no mostrar imagen rota
-    return None if len(logo_b64) < 100 else f"data:image/png;base64,{logo_b64}"
-
-
-def render_logo_contactel_sidebar():
-    """Muestra el logo de Contactel dentro del menú de vistas."""
-    uri = obtener_logo_contactel_uri()
-    if uri:
-        st.markdown(
-            f'<div class="sidebar-brand-wrap">'
-            f'<img src="{uri}" alt="Logo Contactel" class="sidebar-brand-logo"/>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        return
-
-    # Logo Contactel (texto gris oscuro + ícono verde estilo globo/espiral)
-    st.markdown(
-        '<div class="sidebar-brand-wrap">'
-        '<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:2px 4px;">'
-        '<span style="font-family:\'Segoe UI\',Roboto,Arial,sans-serif;font-size:24px;font-weight:700;color:#525252;letter-spacing:-0.6px;line-height:1;">Contactel</span>'
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" style="height:36px;width:36px;flex-shrink:0;">'
-        '<path d="M22 18 H72 A26 26 0 0 1 98 44 V56 A22 22 0 0 1 76 78 H54 V60 H74 A6 6 0 0 0 80 54 V44 A8 8 0 0 0 72 36 H40 V62 A18 18 0 0 1 22 80 V94 L10 82 V44 A26 26 0 0 1 22 18 Z" fill="#39a935"/>'
-        '<path d="M46 46 H72 V64 H46 Z" fill="none" stroke="#39a935" stroke-width="8" stroke-linejoin="round"/>'
-        '</svg>'
-        '</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
 
 
 st.title("Calidad y Capacitación")
@@ -1997,7 +1971,6 @@ def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
     crit_df = construir_detalle_criterios(base_emp)
     ejes = resumen_ejes_criterios(crit_df)
 
-    # 1) ¿Menciona una campaña específica?
     camps_mencionadas = [
         c for c in por_camp["Campaña"]
         if normalizar_clave_campana(c) in normalizar_clave_campana(q)
@@ -2016,7 +1989,6 @@ def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
             )
         return " ".join(partes_c)
 
-    # 2) ¿Menciona un mes específico?
     mes_match = parsear_mes_texto(q)
     if mes_match and not por_mes.empty:
         sub_m = df_m[df_m["Mes"] == mes_match]
@@ -2030,7 +2002,6 @@ def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
             )
         return f"No hay auditorías registradas para <b>{mes_match}</b> con los filtros actuales."
 
-    # 3) ¿Pregunta por asesores / quién rinde más o menos?
     if any(k in q for k in ["asesor", "asesores", "quien", "quién", "mejor asesor", "peor asesor", "rinde", "rendimiento", "equipo"]):
         if not por_ases.empty:
             mejor_a = por_ases.iloc[0]
@@ -2046,7 +2017,6 @@ def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
                 f"Detalle por asesor: {ranking_txt}."
             )
 
-    # 4) ¿Pregunta por criterios, críticos, mejoras, observaciones o puntos a trabajar?
     if any(k in q for k in ["criterio", "critico", "crítico", "mejora", "observacion", "observación", "trabajar", "falla", "objecion", "objeción", "sondeo", "cierre"]):
         if not ejes.empty:
             top_crit = ejes[ejes["Criticos"] > 0].head(3)
@@ -2075,7 +2045,6 @@ def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
                 lineas.append("Observaciones recientes del Sheet: " + " / ".join(obs_reales) + ".")
             return " ".join(lineas) if lineas else f"Sin desvíos críticos registrados sobre {total_aud} auditorías."
 
-    # 5) ¿Pregunta por evolución mensual o comparativa entre campañas?
     if any(k in q for k in ["evolucion", "evolución", "meses", "historico", "histórico", "tendencia", "comparar", "comparativa", "mejor", "peor", "baja", "alta"]):
         partes = []
         if not por_camp.empty:
@@ -2091,7 +2060,6 @@ def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
             partes.append(f"En el tiempo, el promedio evoluciona así: {serie_m}.")
         return " ".join(partes) if partes else f"Promedio general de {prom_gral_dec} en {total_aud} auditorías."
 
-    # 6) Síntesis general explicativa de los datos filtrados para la consulta realizada
     resumen_c = ", ".join([f"<b>{r['Campaña']}</b> ({fmt_pct_dec(r['Promedio'])}, {int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
     criterio_foco = ""
     if not ejes.empty:
