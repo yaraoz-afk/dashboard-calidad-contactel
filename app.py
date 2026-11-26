@@ -881,26 +881,7 @@ ESTRUCTURA_BLOQUES_PDF = [
     )
 ]
 
-DIMENSION_CRITERIO = {
-    "Genera conexión positiva y de confianza en presentación": "Actitudinal",
-    "Explica motivo de llamada claramente": "Comercial",
-    "Explora necesidades reales": "Comercial",
-    "Escucha activa": "Comercial",
-    "Propuesta adaptada al cliente": "Comercial",
-    "Explica beneficios": "Comercial",
-    "Usa ejemplos / comparaciones": "Comercial",
-    "No realiza monólogo": "Comercial",
-    "Avanza hacia el cierre": "Comercial",
-    "Identifica objeción real": "Comercial",
-    "Maneja objeciones": "Comercial",
-    "Realiza cierres parciales": "Comercial",
-    "Indica Valor a abonar": "Comercial",
-    "Sin connotación de obligatoriedad": "Comercial",
-    "Realiza de forma correcta cierres legales": "Comercial",
-    "Tono natural y entusiasta": "Actitudinal",
-    "Evita frases robotizadas": "Actitudinal",
-    "Tuteo al cliente/Cortesía": "Actitudinal"
-}
+DIMENSION_CRITERIO = {criterio: "Comercial" for criterio in PONDERACIONES}
 
 FOCO_DESARROLLO_CRITERIO = {
     "Genera conexión positiva y de confianza en presentación": "Cercanía y calidez en la apertura inicial.",
@@ -1617,23 +1598,22 @@ def preparar_selector_asesor(key_asesor, key_firma, firma_actual, ases_opciones)
         st.session_state[key_firma] = firma_actual
 
 
-def sintesis_dimension(ejes_df, modo, dimension):
+def sintesis_comercial(ejes_df, modo):
     if ejes_df.empty:
         return "Sin registro suficiente."
-    sub = ejes_df[ejes_df["Dimensión"] == dimension]
-    if sub.empty:
-        return "Sin registro en esta dimensión."
 
     if modo == "positivo":
-        elegidos = sub.sort_values(["% Positivo_num", "Evaluaciones"], ascending=[False, False]).head(2)
+        elegidos = ejes_df.sort_values(["% Positivo_num", "Evaluaciones"], ascending=[False, False]).head(2)
+        if elegidos.empty:
+            return "Sin fortalezas registradas."
     elif modo == "critico":
-        elegidos = sub[sub["Criticos"] > 0].sort_values(["% Crítico_num", "Descuento"], ascending=[False, False]).head(2)
+        elegidos = ejes_df[ejes_df["Criticos"] > 0].sort_values(["% Crítico_num", "Descuento"], ascending=[False, False]).head(2)
         if elegidos.empty:
             return "Sin desvíos críticos registrados."
     else:
-        elegidos = sub[sub["Mejoras"] > 0].sort_values(["% Mejora_num", "Descuento"], ascending=[False, False]).head(2)
+        elegidos = ejes_df[ejes_df["Mejoras"] > 0].sort_values(["% Mejora_num", "Descuento"], ascending=[False, False]).head(2)
         if elegidos.empty:
-            return "Sin puntos en desarrollo registrados."
+            return "Sin puntos de mejora registrados."
 
     partes = [FOCO_DESARROLLO_CRITERIO.get(r["Criterio"], r["Criterio"]) for _, r in elegidos.iterrows()]
     return "; ".join(partes)
@@ -1931,14 +1911,9 @@ if seccion == "Vista por asesor":
                 meses_resumen.append(f"{MESES_CORTO.get(m_val, m_val)}: {fmt_pct(g_m['Puntaje final'].mean())}")
             sub_linea = f"Prom. Total: {prom_total_a}" + (f" | {' | '.join(meses_resumen)}" if meses_resumen else "")
 
-            pos_act = sintesis_dimension(ejes_a, "positivo", "Actitudinal")
-            pos_com = sintesis_dimension(ejes_a, "positivo", "Comercial")
-
-            crit_act = sintesis_dimension(ejes_a, "critico", "Actitudinal")
-            crit_com = sintesis_dimension(ejes_a, "critico", "Comercial")
-
-            des_act = sintesis_dimension(ejes_a, "desarrollo", "Actitudinal")
-            des_com = sintesis_dimension(ejes_a, "desarrollo", "Comercial")
+            fortalezas_txt = sintesis_comercial(ejes_a, "positivo")
+            mejoras_txt = sintesis_comercial(ejes_a, "desarrollo")
+            criticos_txt = sintesis_comercial(ejes_a, "critico")
 
             fb_txt = resumen_feedback_comercial_consolidado(sub_a, ejes_a)
             nombre_card = formatear_nombre_recurso(nom_asesor)
@@ -1949,19 +1924,16 @@ if seccion == "Vista por asesor":
                     f'<div class="card-titulo">{nombre_card}</div>'
                     f'<div class="card-sub">{sub_linea}</div>'
                     f'<div class="bloque-verde">'
-                    f'<div class="tit-verde">VERDE (Fortalezas)</div>'
-                    f'<div>• <b>Actitudinal:</b> {pos_act}</div>'
-                    f'<div>• <b>Comercial:</b> {pos_com}</div>'
-                    f'</div>'
-                    f'<div class="bloque-rojo">'
-                    f'<div class="tit-rojo">ROJO (Crítico a Trabajar)</div>'
-                    f'<div>• <b>Actitudinal:</b> {crit_act}</div>'
-                    f'<div>• <b>Comercial:</b> {crit_com}</div>'
+                    f'<div class="tit-verde">Fortalezas</div>'
+                    f'<div>{fortalezas_txt}</div>'
                     f'</div>'
                     f'<div class="bloque-naranja">'
-                    f'<div class="tit-naranja">NARANJA (En Desarrollo)</div>'
-                    f'<div>• <b>Actitudinal:</b> {des_act}</div>'
-                    f'<div>• <b>Comercial:</b> {des_com}</div>'
+                    f'<div class="tit-naranja">Puntos de mejora</div>'
+                    f'<div>{mejoras_txt}</div>'
+                    f'</div>'
+                    f'<div class="bloque-rojo">'
+                    f'<div class="tit-rojo">Críticos</div>'
+                    f'<div>{criticos_txt}</div>'
                     f'</div>'
                     f'<div class="bloque-feedback">'
                     f'<div class="tit-fb">FEEDBACK / OBSERVACIONES:</div>'
