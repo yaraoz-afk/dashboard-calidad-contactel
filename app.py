@@ -310,7 +310,7 @@ ul[role="listbox"] div,
 .tit-naranja {{ color: #b45309; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-fb {{ color: #0f172a; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 
-/* Matriz Mes x Campaña estilo planilla (ajustada al ancho sin scroll lateral) */
+/* Matriz Mes x Campaña estilo planilla */
 .matriz-emp-titulo {{
     font-size: 15px;
     font-weight: 800;
@@ -555,6 +555,94 @@ table.tabla-comp tr:nth-child(even) td {{
     background-color: #f8fafc;
 }}
 
+/* Tabla Detalle por auditoria estilo planilla / PDF con scroll horizontal */
+.det-aud-wrap {{
+    width: 100%;
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #64748b;
+    border-radius: 4px;
+    margin-bottom: 18px;
+}}
+table.det-aud {{
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+    color: #000000;
+}}
+table.det-aud th.th-meta {{
+    background-color: #d9e2ec;
+    color: #0f172a;
+    font-weight: 800;
+    text-align: center;
+    padding: 7px 8px;
+    border: 1px solid #64748b;
+    white-space: nowrap;
+}}
+table.det-aud th.th-item {{
+    background-color: #1e3a8a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    padding: 6px 6px;
+    border: 1px solid #64748b;
+    max-width: 135px;
+    min-width: 85px;
+    white-space: normal;
+    line-height: 1.15;
+}}
+table.det-aud th.th-bloque {{
+    background-color: #15803d;
+    color: #ffffff;
+    font-weight: 800;
+    text-align: center;
+    padding: 6px 6px;
+    border: 1px solid #64748b;
+    min-width: 86px;
+    white-space: normal;
+    line-height: 1.15;
+}}
+table.det-aud td.td-meta {{
+    background-color: #ffffff;
+    color: #000000;
+    padding: 6px 8px;
+    border: 1px solid #64748b;
+    vertical-align: top;
+    font-weight: 600;
+    white-space: nowrap;
+}}
+table.det-aud td.td-texto-largo {{
+    background-color: #ffffff;
+    color: #000000;
+    padding: 6px 8px;
+    border: 1px solid #64748b;
+    vertical-align: top;
+    min-width: 220px;
+    max-width: 320px;
+    white-space: normal;
+    line-height: 1.3;
+}}
+table.det-aud td.td-pct {{
+    text-align: center;
+    vertical-align: middle;
+    padding: 6px 6px;
+    border: 1px solid #64748b;
+    font-weight: 700;
+    color: #000000;
+    white-space: nowrap;
+}}
+table.det-aud td.td-bloque {{
+    background-color: #f1f5f9;
+    text-align: center;
+    vertical-align: middle;
+    padding: 6px 6px;
+    border: 1px solid #64748b;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+}}
+
 /* Deducción final analítica */
 .deduccion-box {{
     background: #ffffff;
@@ -663,6 +751,57 @@ CRITERIOS = [
     "Tono natural y entusiasta",
     "Evita frases robotizadas",
     "Tuteo al cliente/Cortesía"
+]
+
+ESTRUCTURA_BLOQUES_PDF = [
+    (
+        "APERTURA",
+        [
+            "Genera conexión positiva y de confianza en presentación",
+            "Explica motivo de llamada claramente"
+        ]
+    ),
+    (
+        "SONDEO",
+        [
+            "Explora necesidades reales",
+            "Escucha activa"
+        ]
+    ),
+    (
+        "ARGUMENTACIÓN/PROPUESTA",
+        [
+            "Propuesta adaptada al cliente",
+            "Explica beneficios",
+            "Usa ejemplos / comparaciones",
+            "No realiza monólogo",
+            "Avanza hacia el cierre"
+        ]
+    ),
+    (
+        "MANEJO DE OBJECIONES",
+        [
+            "Identifica objeción real",
+            "Maneja objeciones"
+        ]
+    ),
+    (
+        "ESTRUCTURA",
+        [
+            "Realiza cierres parciales",
+            "Indica Valor a abonar",
+            "Sin connotación de obligatoriedad",
+            "Realiza de forma correcta cierres legales"
+        ]
+    ),
+    (
+        "LENGUAJE Y TONO",
+        [
+            "Tono natural y entusiasta",
+            "Evita frases robotizadas",
+            "Tuteo al cliente/Cortesía"
+        ]
+    )
 ]
 
 DIMENSION_CRITERIO = {
@@ -908,6 +1047,131 @@ def calcular_puntaje(fila):
     return (obtenido / posible * 100) if posible else None
 
 
+def pct_item_en_fila(fila, criterio):
+    resp = str(fila.get(criterio, "")).strip().lower()
+    if resp in ("si", "sí", "n/a"):
+        return 100.0
+    if resp == "punto de mejora":
+        return 50.0
+    if resp == "no":
+        return 0.0
+    return None
+
+
+def pct_bloque_en_fila(fila, criterios_bloque):
+    tipo = normalizar_tipo(fila["Tipo de gestión"])
+    indice = 0 if tipo == "Venta" else 1
+    obtenido = 0.0
+    posible = 0.0
+
+    for crit in criterios_bloque:
+        pesos = PONDERACIONES.get(crit)
+        if not pesos:
+            continue
+        peso = pesos[indice]
+        resp = str(fila.get(crit, "")).strip().lower()
+        if resp not in ("si", "sí", "no", "punto de mejora", "n/a"):
+            continue
+        posible += peso
+        if resp in ("si", "sí", "n/a"):
+            obtenido += peso
+        elif resp == "punto de mejora":
+            obtenido += peso / 2.0
+
+    if posible <= 0:
+        vals = [pct_item_en_fila(fila, c) for c in criterios_bloque]
+        vals_num = [v for v in vals if v is not None]
+        return (sum(vals_num) / len(vals_num)) if vals_num else None
+
+    return (obtenido / posible) * 100.0
+
+
+def construir_df_detalle_items(filtrado_det):
+    columnas_fijas = [
+        "Asesor", "Fecha", "Campaña", "ID", "Puntaje",
+        "Puntos a trabajar", "Observaciones"
+    ]
+    registros = []
+    ordenado = filtrado_det.sort_values("Fecha", ascending=False, na_position="last")
+
+    for _, fila in ordenado.iterrows():
+        fecha_str = fila["Fecha"].strftime("%d/%m/%Y") if pd.notna(fila["Fecha"]) else (fila["Fecha_raw"] or "Sin fecha")
+        row_dict = {
+            "Asesor": formatear_nombre_recurso(fila["Asesor"]),
+            "Fecha": fecha_str,
+            "Campaña": fila["Campaña"],
+            "ID": fila["ID"] if fila["ID"] else "-",
+            "Puntaje": fmt_pct_dec(fila["Puntaje final"]) if pd.notna(fila["Puntaje final"]) else "-",
+            "Puntos a trabajar": fila["Puntos a trabajar"] if fila["Puntos a trabajar"] else "-",
+            "Observaciones": fila["Observaciones"] if fila["Observaciones"] else "-"
+        }
+
+        for nombre_bloque, crits_bloque in ESTRUCTURA_BLOQUES_PDF:
+            for crit in crits_bloque:
+                val_p = pct_item_en_fila(fila, crit)
+                row_dict[crit] = f"{round(val_p)}%" if val_p is not None else "-"
+            val_b = pct_bloque_en_fila(fila, crits_bloque)
+            row_dict[nombre_bloque] = f"{round(val_b)}%" if val_b is not None else "-"
+
+        registros.append(row_dict)
+
+    cols_ordenadas = list(columnas_fijas)
+    for nombre_bloque, crits_bloque in ESTRUCTURA_BLOQUES_PDF:
+        cols_ordenadas.extend(crits_bloque)
+        cols_ordenadas.append(nombre_bloque)
+
+    return pd.DataFrame(registros, columns=cols_ordenadas)
+
+
+def render_detalle_auditoria_pdf_html(df_det_items):
+    if df_det_items.empty:
+        st.info("No hay auditorías para mostrar con los filtros seleccionados.")
+        return
+
+    meta_cols = ["Asesor", "Fecha", "Campaña", "ID", "Puntaje", "Puntos a trabajar", "Observaciones"]
+    nombres_bloques = {b for b, _ in ESTRUCTURA_BLOQUES_PDF}
+
+    th_html = []
+    for col in df_det_items.columns:
+        if col in meta_cols:
+            th_html.append(f'<th class="th-meta">{col}</th>')
+        elif col in nombres_bloques:
+            th_html.append(f'<th class="th-bloque">{col}</th>')
+        else:
+            th_html.append(f'<th class="th-item">{col}</th>')
+
+    filas_html = []
+    for _, r in df_det_items.iterrows():
+        celdas = []
+        for col in df_det_items.columns:
+            val = str(r[col])
+            if col in ("Puntos a trabajar", "Observaciones"):
+                celdas.append(f'<td class="td-texto-largo">{val}</td>')
+            elif col in meta_cols:
+                celdas.append(f'<td class="td-meta">{val}</td>')
+            elif col in nombres_bloques:
+                celdas.append(f'<td class="td-bloque">{val}</td>')
+            else:
+                if val == "100%":
+                    bg = "#dcfce7"
+                elif val == "50%":
+                    bg = "#fef9c3"
+                elif val == "0%":
+                    bg = "#fee2e2"
+                else:
+                    bg = "#f8fafc"
+                celdas.append(f'<td class="td-pct" style="background-color:{bg};">{val}</td>')
+        filas_html.append(f"<tr>{''.join(celdas)}</tr>")
+
+    st.markdown(
+        f'<div class="det-aud-wrap"><table class="det-aud">'
+        f'<thead><tr>{"".join(th_html)}</tr></thead>'
+        f'<tbody>{"".join(filas_html)}</tbody>'
+        f'</table></div>',
+        unsafe_allow_html=True
+    )
+
+
 @st.cache_data(ttl=300)
 def leer_mediciones_crudo_y_procesado():
     bruto = pd.read_csv(
@@ -1035,14 +1299,6 @@ def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False):
         ticksuffix="%" if es_porcentaje_y else ""
     )
     return fig
-
-
-def mostrar_tabla(datos, columnas=None):
-    if datos.empty:
-        st.info("No hay datos para mostrar con la selección actual.")
-    else:
-        tabla = datos if columnas is None else datos[columnas]
-        st.dataframe(tabla, use_container_width=True, hide_index=True)
 
 
 def render_matriz_empresa_html(base_emp):
@@ -1719,44 +1975,14 @@ else:
         st.warning("No hay auditorías con los filtros seleccionados.")
         st.stop()
 
-    columnas_detalle = [
-        "Fecha", "Asesor", "Campaña", "Año", "Mes", "ID", "Tipo de gestión",
-        "Tipificación", "Puntaje final", "Puntos a trabajar",
-        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
-    ]
-    detalle = filtrado_det[columnas_detalle].copy()
-    detalle["Fecha_str"] = detalle["Fecha"].dt.strftime("%d/%m/%Y").fillna("Sin fecha")
-    detalle["Calidad"] = detalle["Puntaje final"].apply(fmt_pct)
-    detalle = detalle.sort_values("Fecha", ascending=False, na_position="last")
+    df_det_items = construir_df_detalle_items(filtrado_det)
+    render_detalle_auditoria_pdf_html(df_det_items)
 
-    mostrar_tabla(detalle[[
-        "Fecha_str", "Asesor", "Campaña", "Año", "Mes", "ID", "Tipo de gestión",
-        "Tipificación", "Calidad", "Puntos a trabajar",
-        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
-    ]])
-
-    st.markdown("### Comentarios y observaciones completos")
-    con_comentarios = detalle[
-        (detalle["Observaciones"] != "") | (detalle["Puntos a trabajar"] != "")
-    ]
-    if con_comentarios.empty:
-        st.info("No hay comentarios u observaciones cargadas en las auditorías filtradas.")
-    else:
-        for _, fila_d in con_comentarios.iterrows():
-            st.markdown(
-                f'<div class="comentario-card">'
-                f'<b>{formatear_nombre_recurso(fila_d["Asesor"])}</b> — {fila_d["Campaña"]} ({fila_d["Fecha_str"]} | {fila_d["Año"]} - {fila_d["Mes"]} | Calidad: {fila_d["Calidad"]})<br>'
-                f'<b>Puntos a trabajar:</b> {fila_d["Puntos a trabajar"] if fila_d["Puntos a trabajar"] else "Sin registro"}<br>'
-                f'<b>Observaciones:</b> {fila_d["Observaciones"] if fila_d["Observaciones"] else "Sin registro"}'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-    csv = filtrado_det[columnas_detalle].to_csv(index=False, sep=";", encoding="utf-8-sig")
+    csv = df_det_items.to_csv(index=False, sep=";", encoding="utf-8-sig")
     st.download_button(
-        "Descargar auditorías en CSV",
+        "Descargar detalle por auditoría en CSV",
         data=csv,
-        file_name="auditorias_calidad_contactel.csv",
+        file_name="detalle_por_auditoria_contactel.csv",
         mime="text/csv"
     )
 
