@@ -102,6 +102,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
 [data-testid="stMultiSelect"] [data-baseweb="tag"],
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:hover,
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:focus,
+[data-testid="stMultiSelect"] [data-baseweb="tag"]:active,
 [data-testid="stMultiSelect"] [data-baseweb="tag"][aria-selected="true"],
 [data-baseweb="tag"] {{
     background: {VERDE_PRINCIPAL} !important;
@@ -332,14 +333,12 @@ table.tabla-comp tr:nth-child(even) td {{
 </style>
 """, unsafe_allow_html=True)
 
-# Script para forzar verde #30b44e en tags seleccionados y resaltar 'x' y flechita del desplegable
 components.html("""
 <script>
 (function estilizarFiltrosContactel() {
     const doc = window.parent.document;
 
     function aplicarEstilos() {
-        // 1. Tags seleccionados en verde #30b44e con texto blanco y sin recortes
         const tags = doc.querySelectorAll('[data-testid="stMultiSelect"] [data-baseweb="tag"], [data-baseweb="tag"]');
         tags.forEach(tag => {
             tag.style.setProperty("background-color", "#30b44e", "important");
@@ -371,7 +370,6 @@ components.html("""
             });
         });
 
-        // 2. Contenedores de multiselect y selectbox: permitir wrap y resaltar 'x' y flechita
         const selects = doc.querySelectorAll('[data-testid="stMultiSelect"] [data-baseweb="select"] > div, [data-testid="stSelectbox"] [data-baseweb="select"] > div');
         selects.forEach(box => {
             box.style.setProperty("background-color", "#f1f5f9", "important");
@@ -419,7 +417,6 @@ components.html("""
                     svg.style.setProperty("opacity", "1", "important");
                     svg.style.setProperty("visibility", "visible", "important");
                     if (idx === 0 && svgs.length > 1) {
-                        // Botón 'x' para borrar selecciones
                         const parentBtn = svg.closest("div") || svg.parentElement;
                         if (parentBtn) {
                             parentBtn.style.setProperty("background-color", "#dcfce7", "important");
@@ -436,7 +433,6 @@ components.html("""
                         svg.style.setProperty("stroke", "#1e7e34", "important");
                         svg.style.setProperty("stroke-width", "3px", "important");
                     } else {
-                        // Flechita desplegable
                         const parentArrow = svg.closest("div") || svg.parentElement;
                         if (parentArrow) {
                             parentArrow.style.setProperty("background-color", "#e2e8f0", "important");
@@ -889,20 +885,55 @@ def resumen_ejes_criterios(df_crit):
     return res.sort_values(["% Crítico_num", "% Mejora_num", "Descuento"], ascending=[False, False, False])
 
 
-def aplicar_filtros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
-                    todos_anios=False, todos_meses=False, todas_camps=False, todos_ases=False):
-    out = base_df.copy()
-    if anios_sel and not todos_anios:
-        out = out[out["Año"].isin(anios_sel)]
-    if meses_sel and not todos_meses:
-        out = out[out["Mes"].isin(meses_sel)]
-    if camps_sel and not todas_camps:
+def filtrar_cascada(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None):
+    """Filtra en cascada: Año -> Mes -> Campaña -> Asesor."""
+    df_p = base_df.copy()
+    if anios_sel:
+        df_p = df_p[df_p["Año"].isin(anios_sel)]
+    else:
+        df_p = df_p.iloc[0:0]
+
+    if meses_sel:
+        df_p = df_p[df_p["Mes"].isin(meses_sel)]
+    else:
+        df_p = df_p.iloc[0:0]
+
+    camps_disp_cascada = sorted(df_p["Campaña"].dropna().unique())
+
+    df_c = df_p.copy()
+    if camps_sel:
         claves_c = {normalizar_clave(c) for c in camps_sel}
-        out = out[out["Campaña_key"].isin(claves_c)]
-    if ases_sel is not None and ases_sel and not todos_ases:
+        df_c = df_c[df_c["Campaña_key"].isin(claves_c)]
+    else:
+        df_c = df_c.iloc[0:0]
+
+    ases_disp_cascada = sorted(df_c["Asesor"].dropna().unique())
+
+    if ases_sel is None:
+        return df_c, camps_disp_cascada, ases_disp_cascada
+
+    df_a = df_c.copy()
+    if ases_sel:
         claves_a = {normalizar_clave(a) for a in ases_sel}
-        out = out[out["Asesor_key"].isin(claves_a)]
-    return out
+        df_a = df_a[df_a["Asesor_key"].isin(claves_a)]
+    else:
+        df_a = df_a.iloc[0:0]
+
+    return df_a, camps_disp_cascada, ases_disp_cascada
+
+
+def sincronizar_multiselect(key_widget, opciones_validas):
+    """Mantiene en session_state solo opciones válidas para el cruce actual."""
+    if key_widget not in st.session_state:
+        st.session_state[key_widget] = list(opciones_validas)
+        return
+    actuales = list(st.session_state[key_widget])
+    validas_set = set(opciones_validas)
+    filtradas = [x for x in actuales if x in validas_set]
+    if not filtradas and opciones_validas:
+        filtradas = list(opciones_validas)
+    if filtradas != actuales:
+        st.session_state[key_widget] = filtradas
 
 
 def sintesis_dimension(ejes_df, modo, dimension):
@@ -1154,29 +1185,39 @@ with st.sidebar:
     )
 
 # =====================================================
-# VISTA 1: VISTA POR ASESOR
+# VISTA 1: VISTA POR ASESOR (FILTRADO EN CASCADA)
 # =====================================================
 if seccion == "Vista por asesor":
     st.subheader("Vista por asesor")
 
+    sincronizar_multiselect("va_anio", años_disp)
+    sincronizar_multiselect("va_mes", meses_disp)
+
     f1, f2, f3, f4 = st.columns(4)
     with f1:
-        a_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="va_anio")
+        a_anios_sel = st.multiselect("Año", options=años_disp, key="va_anio")
     with f2:
-        a_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="va_mes")
+        a_meses_sel = st.multiselect("Mes", options=meses_disp, key="va_mes")
+
+    # Calcular campañas y asesores disponibles en cascada según Año + Mes
+    _, camps_cascada_a, _ = filtrar_cascada(
+        df, a_anios_sel, a_meses_sel, camps_sel=camp_disp, ases_sel=None
+    )
+    sincronizar_multiselect("va_camp", camps_cascada_a)
+
     with f3:
-        a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="va_camp")
+        a_camps_sel = st.multiselect("Campaña", options=camps_cascada_a, key="va_camp")
+
+    _, _, ases_cascada_a = filtrar_cascada(
+        df, a_anios_sel, a_meses_sel, camps_sel=a_camps_sel, ases_sel=None
+    )
+    sincronizar_multiselect("va_ases", ases_cascada_a)
+
     with f4:
-        a_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="va_ases")
+        a_ases_sel = st.multiselect("Asesor", options=ases_cascada_a, key="va_ases")
 
-    todos_a_anios = (set(a_anios_sel) == set(años_disp)) if años_disp else True
-    todos_a_meses = (set(a_meses_sel) == set(meses_disp)) if meses_disp else True
-    todos_a_camps = (set(a_camps_sel) == set(camp_disp)) if camp_disp else True
-    todos_a_ases = (set(a_ases_sel) == set(ases_disp)) if ases_disp else True
-
-    filtrado_ases = aplicar_filtros(
-        df, a_anios_sel, a_meses_sel, a_camps_sel, a_ases_sel,
-        todos_a_anios, todos_a_meses, todos_a_camps, todos_a_ases
+    filtrado_ases, _, _ = filtrar_cascada(
+        df, a_anios_sel, a_meses_sel, camps_sel=a_camps_sel, ases_sel=a_ases_sel
     )
 
     k1, k2, k3, k4 = st.columns(4)
@@ -1261,24 +1302,32 @@ if seccion == "Vista por asesor":
 elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
 
+    sincronizar_multiselect("ve_anio", años_disp)
+    sincronizar_multiselect("ve_mes", meses_disp)
+
     fe1, fe2, fe3 = st.columns(3)
     with fe1:
-        e_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="ve_anio")
+        e_anios_sel = st.multiselect("Año", options=años_disp, key="ve_anio")
     with fe2:
-        e_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ve_mes")
+        e_meses_sel = st.multiselect("Mes", options=meses_disp, key="ve_mes")
+
+    _, camps_cascada_e, _ = filtrar_cascada(
+        df, e_anios_sel, e_meses_sel, camps_sel=camp_disp, ases_sel=None
+    )
+    sincronizar_multiselect("ve_camp", camps_cascada_e)
+
     with fe3:
-        e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ve_camp")
+        e_camps_sel = st.multiselect("Campaña", options=camps_cascada_e, key="ve_camp")
 
-    todos_e_anios = (set(e_anios_sel) == set(años_disp)) if años_disp else True
-    todos_e_meses = (set(e_meses_sel) == set(meses_disp)) if meses_disp else True
-    todos_e_camps = (set(e_camps_sel) == set(camp_disp)) if camp_disp else True
-
-    base_emp = aplicar_filtros(
-        df, e_anios_sel, e_meses_sel, e_camps_sel, ases_sel=None,
-        todos_anios=todos_e_anios, todos_meses=todos_e_meses, todas_camps=todos_e_camps
+    base_emp, _, _ = filtrar_cascada(
+        df, e_anios_sel, e_meses_sel, camps_sel=e_camps_sel, ases_sel=None
     )
 
-    sin_filtros_emp = todos_e_anios and todos_e_meses and todos_e_camps
+    sin_filtros_emp = (
+        set(e_anios_sel) == set(años_disp)
+        and set(e_meses_sel) == set(meses_disp)
+        and set(e_camps_sel) == set(camp_disp)
+    )
     total_aud_emp = len(df) if sin_filtros_emp else len(base_emp)
 
     e1, e2, e3, e4 = st.columns(4)
@@ -1327,24 +1376,33 @@ elif seccion == "Vista por empresa":
 else:
     st.subheader("Detalle por auditoria")
 
+    sincronizar_multiselect("da_anio", años_disp)
+    sincronizar_multiselect("da_mes", meses_disp)
+
     fd1, fd2, fd3, fd4 = st.columns(4)
     with fd1:
-        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
+        d_anios_sel = st.multiselect("Año", options=años_disp, key="da_anio")
     with fd2:
-        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="da_mes")
+        d_meses_sel = st.multiselect("Mes", options=meses_disp, key="da_mes")
+
+    _, camps_cascada_d, _ = filtrar_cascada(
+        df, d_anios_sel, d_meses_sel, camps_sel=camp_disp, ases_sel=None
+    )
+    sincronizar_multiselect("da_camp", camps_cascada_d)
+
     with fd3:
-        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
+        d_camps_sel = st.multiselect("Campaña", options=camps_cascada_d, key="da_camp")
+
+    _, _, ases_cascada_d = filtrar_cascada(
+        df, d_anios_sel, d_meses_sel, camps_sel=d_camps_sel, ases_sel=None
+    )
+    sincronizar_multiselect("da_ases", ases_cascada_d)
+
     with fd4:
-        d_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="da_ases")
+        d_ases_sel = st.multiselect("Asesor", options=ases_cascada_d, key="da_ases")
 
-    todos_d_anios = (set(d_anios_sel) == set(años_disp)) if años_disp else True
-    todos_d_meses = (set(d_meses_sel) == set(meses_disp)) if meses_disp else True
-    todos_d_camps = (set(d_camps_sel) == set(camp_disp)) if camp_disp else True
-    todos_d_ases = (set(d_ases_sel) == set(ases_disp)) if ases_disp else True
-
-    filtrado_det = aplicar_filtros(
-        df, d_anios_sel, d_meses_sel, d_camps_sel, d_ases_sel,
-        todos_d_anios, todos_d_meses, todos_d_camps, todos_d_ases
+    filtrado_det, _, _ = filtrar_cascada(
+        df, d_anios_sel, d_meses_sel, camps_sel=d_camps_sel, ases_sel=d_ases_sel
     )
 
     if filtrado_det.empty:
