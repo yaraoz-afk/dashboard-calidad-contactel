@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 
@@ -84,7 +83,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     font-weight: 700;
 }}
 
-/* Contenedor de multiselect y tags en verde #30b44e */
+/* Caja del multiselect: visible completa, sin recortes y con 'x' y flechita contrastadas */
 [data-testid="stMultiSelect"],
 [data-testid="stMultiSelect"] > div,
 [data-testid="stMultiSelect"] [data-baseweb="select"],
@@ -99,24 +98,92 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     overflow: visible !important;
 }}
 
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:first-child {{
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 5px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 5px 6px !important;
+}}
+
+[data-testid="stMultiSelect"] input {{
+    color: #000000 !important;
+    min-width: 70px !important;
+}}
+
+/* Tags seleccionados en verde #30b44e con texto e 'x' en blanco */
 [data-testid="stMultiSelect"] [data-baseweb="tag"],
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:hover,
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:focus,
-[data-testid="stMultiSelect"] [data-baseweb="tag"]:active,
-[data-testid="stMultiSelect"] [data-baseweb="tag"][aria-selected="true"],
-[data-baseweb="tag"] {{
-    background: {VERDE_PRINCIPAL} !important;
+[data-testid="stMultiSelect"] [data-baseweb="tag"][aria-selected="true"] {{
     background-color: {VERDE_PRINCIPAL} !important;
+    background: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
     border: 1px solid {VERDE_OSCURO} !important;
     border-radius: 6px !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 28px !important;
+    padding: 3px 7px !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    overflow: visible !important;
 }}
 
-[data-testid="stMultiSelect"] [data-baseweb="tag"] *,
-[data-baseweb="tag"] * {{
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span,
+[data-testid="stMultiSelect"] [data-baseweb="tag"] div {{
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #ffffff !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+}}
+
+[data-testid="stMultiSelect"] [data-baseweb="tag"] svg {{
     color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
+    stroke-width: 2.6px !important;
+    width: 14px !important;
+    height: 14px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    flex-shrink: 0 !important;
+}}
+
+/* Controles derechos del multiselect ('x' limpiar todo y flechita desplegable) */
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child {{
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding-right: 8px !important;
+    padding-left: 4px !important;
+    background-color: {GRIS_DESPLEGABLE} !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    flex-shrink: 0 !important;
+}}
+
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child svg {{
+    width: 15px !important;
+    height: 15px !important;
+    color: #0f172a !important;
+    fill: #0f172a !important;
+    stroke: #0f172a !important;
+    stroke-width: 2.6px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }}
 
 /* Menú desplegable abierto */
@@ -332,135 +399,6 @@ table.tabla-comp tr:nth-child(even) td {{
 }}
 </style>
 """, unsafe_allow_html=True)
-
-components.html("""
-<script>
-(function estilizarFiltrosContactel() {
-    const doc = window.parent.document;
-
-    function aplicarEstilos() {
-        const tags = doc.querySelectorAll('[data-testid="stMultiSelect"] [data-baseweb="tag"], [data-baseweb="tag"]');
-        tags.forEach(tag => {
-            tag.style.setProperty("background-color", "#30b44e", "important");
-            tag.style.setProperty("background", "#30b44e", "important");
-            tag.style.setProperty("border", "1px solid #1e7e34", "important");
-            tag.style.setProperty("border-radius", "6px", "important");
-            tag.style.setProperty("color", "#ffffff", "important");
-            tag.style.setProperty("max-width", "100%", "important");
-            tag.style.setProperty("height", "auto", "important");
-            tag.style.setProperty("min-height", "28px", "important");
-            tag.style.setProperty("overflow", "visible", "important");
-
-            tag.querySelectorAll("*").forEach(el => {
-                el.style.setProperty("color", "#ffffff", "important");
-                if (el.tagName.toLowerCase() === "svg" || el.closest("svg")) {
-                    el.style.setProperty("fill", "#ffffff", "important");
-                    el.style.setProperty("stroke", "#ffffff", "important");
-                    el.style.setProperty("stroke-width", "2.6px", "important");
-                    el.style.setProperty("opacity", "1", "important");
-                    el.style.setProperty("visibility", "visible", "important");
-                } else {
-                    el.style.setProperty("background", "transparent", "important");
-                    el.style.setProperty("background-color", "transparent", "important");
-                    el.style.setProperty("white-space", "normal", "important");
-                    el.style.setProperty("overflow", "visible", "important");
-                    el.style.setProperty("text-overflow", "clip", "important");
-                    el.style.setProperty("max-width", "none", "important");
-                }
-            });
-        });
-
-        const selects = doc.querySelectorAll('[data-testid="stMultiSelect"] [data-baseweb="select"] > div, [data-testid="stSelectbox"] [data-baseweb="select"] > div');
-        selects.forEach(box => {
-            box.style.setProperty("background-color", "#f1f5f9", "important");
-            box.style.setProperty("border-color", "#64748b", "important");
-            box.style.setProperty("min-height", "44px", "important");
-            box.style.setProperty("height", "auto", "important");
-            box.style.setProperty("max-height", "none", "important");
-            box.style.setProperty("overflow", "visible", "important");
-
-            const children = box.children;
-            if (children && children.length >= 1) {
-                const leftArea = children[0];
-                leftArea.style.setProperty("display", "flex", "important");
-                leftArea.style.setProperty("flex-wrap", "wrap", "important");
-                leftArea.style.setProperty("align-items", "center", "important");
-                leftArea.style.setProperty("gap", "5px", "important");
-                leftArea.style.setProperty("height", "auto", "important");
-                leftArea.style.setProperty("max-height", "none", "important");
-                leftArea.style.setProperty("overflow", "visible", "important");
-                leftArea.style.setProperty("padding", "5px 6px", "important");
-            }
-
-            if (children && children.length >= 2) {
-                const rightArea = children[children.length - 1];
-                rightArea.style.setProperty("display", "flex", "important");
-                rightArea.style.setProperty("align-items", "center", "important");
-                rightArea.style.setProperty("gap", "6px", "important");
-                rightArea.style.setProperty("padding-right", "8px", "important");
-                rightArea.style.setProperty("padding-left", "4px", "important");
-                rightArea.style.setProperty("background-color", "#f1f5f9", "important");
-                rightArea.style.setProperty("opacity", "1", "important");
-                rightArea.style.setProperty("visibility", "visible", "important");
-                rightArea.style.setProperty("flex-shrink", "0", "important");
-
-                const actionBtns = rightArea.querySelectorAll("div, button, svg");
-                actionBtns.forEach(btn => {
-                    btn.style.setProperty("opacity", "1", "important");
-                    btn.style.setProperty("visibility", "visible", "important");
-                });
-
-                const svgs = rightArea.querySelectorAll("svg");
-                svgs.forEach((svg, idx) => {
-                    svg.style.setProperty("width", "15px", "important");
-                    svg.style.setProperty("height", "15px", "important");
-                    svg.style.setProperty("opacity", "1", "important");
-                    svg.style.setProperty("visibility", "visible", "important");
-                    if (idx === 0 && svgs.length > 1) {
-                        const parentBtn = svg.closest("div") || svg.parentElement;
-                        if (parentBtn) {
-                            parentBtn.style.setProperty("background-color", "#dcfce7", "important");
-                            parentBtn.style.setProperty("border", "1.5px solid #1e7e34", "important");
-                            parentBtn.style.setProperty("border-radius", "999px", "important");
-                            parentBtn.style.setProperty("width", "24px", "important");
-                            parentBtn.style.setProperty("height", "24px", "important");
-                            parentBtn.style.setProperty("display", "inline-flex", "important");
-                            parentBtn.style.setProperty("align-items", "center", "important");
-                            parentBtn.style.setProperty("justify-content", "center", "important");
-                        }
-                        svg.style.setProperty("color", "#1e7e34", "important");
-                        svg.style.setProperty("fill", "#1e7e34", "important");
-                        svg.style.setProperty("stroke", "#1e7e34", "important");
-                        svg.style.setProperty("stroke-width", "3px", "important");
-                    } else {
-                        const parentArrow = svg.closest("div") || svg.parentElement;
-                        if (parentArrow) {
-                            parentArrow.style.setProperty("background-color", "#e2e8f0", "important");
-                            parentArrow.style.setProperty("border", "1.5px solid #0f172a", "important");
-                            parentArrow.style.setProperty("border-radius", "6px", "important");
-                            parentArrow.style.setProperty("width", "24px", "important");
-                            parentArrow.style.setProperty("height", "24px", "important");
-                            parentArrow.style.setProperty("display", "inline-flex", "important");
-                            parentArrow.style.setProperty("align-items", "center", "important");
-                            parentArrow.style.setProperty("justify-content", "center", "important");
-                        }
-                        svg.style.setProperty("color", "#0f172a", "important");
-                        svg.style.setProperty("fill", "#0f172a", "important");
-                        svg.style.setProperty("stroke", "#0f172a", "important");
-                        svg.style.setProperty("stroke-width", "3px", "important");
-                    }
-                });
-            }
-        });
-    }
-
-    aplicarEstilos();
-    const observer = new MutationObserver(aplicarEstilos);
-    observer.observe(doc.body, { childList: true, subtree: true });
-    setInterval(aplicarEstilos, 400);
-})();
-</script>
-""", height=0)
 
 st.title("Calidad y Capacitación")
 st.caption("Panel de seguimiento de desempeño | Contactel")
@@ -885,26 +823,25 @@ def resumen_ejes_criterios(df_crit):
     return res.sort_values(["% Crítico_num", "% Mejora_num", "Descuento"], ascending=[False, False, False])
 
 
-def filtrar_cascada(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None):
-    """Filtra en cascada: Año -> Mes -> Campaña -> Asesor."""
+def calcular_opciones_y_filtrar(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None):
+    """
+    Calcula opciones en cascada (Año -> Mes -> Campaña -> Asesor)
+    respetando listas vacías cuando el usuario borra selecciones.
+    """
     df_p = base_df.copy()
     if anios_sel:
         df_p = df_p[df_p["Año"].isin(anios_sel)]
-    else:
-        df_p = df_p.iloc[0:0]
-
     if meses_sel:
         df_p = df_p[df_p["Mes"].isin(meses_sel)]
-    else:
-        df_p = df_p.iloc[0:0]
 
     camps_disp_cascada = sorted(df_p["Campaña"].dropna().unique())
+    camps_validas = [c for c in (camps_sel or []) if c in camps_disp_cascada]
 
     df_c = df_p.copy()
-    if camps_sel:
-        claves_c = {normalizar_clave(c) for c in camps_sel}
+    if camps_validas:
+        claves_c = {normalizar_clave(c) for c in camps_validas}
         df_c = df_c[df_c["Campaña_key"].isin(claves_c)]
-    else:
+    elif camps_sel is not None and len(camps_sel) == 0:
         df_c = df_c.iloc[0:0]
 
     ases_disp_cascada = sorted(df_c["Asesor"].dropna().unique())
@@ -912,28 +849,22 @@ def filtrar_cascada(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None):
     if ases_sel is None:
         return df_c, camps_disp_cascada, ases_disp_cascada
 
+    ases_validos = [a for a in ases_sel if a in ases_disp_cascada]
     df_a = df_c.copy()
-    if ases_sel:
-        claves_a = {normalizar_clave(a) for a in ases_sel}
+    if ases_validos:
+        claves_a = {normalizar_clave(a) for a in ases_validos}
         df_a = df_a[df_a["Asesor_key"].isin(claves_a)]
-    else:
+    elif len(ases_sel) == 0:
         df_a = df_a.iloc[0:0]
 
     return df_a, camps_disp_cascada, ases_disp_cascada
 
 
-def sincronizar_multiselect(key_widget, opciones_validas):
-    """Mantiene en session_state solo opciones válidas para el cruce actual."""
-    if key_widget not in st.session_state:
-        st.session_state[key_widget] = list(opciones_validas)
-        return
-    actuales = list(st.session_state[key_widget])
-    validas_set = set(opciones_validas)
-    filtradas = [x for x in actuales if x in validas_set]
-    if not filtradas and opciones_validas:
-        filtradas = list(opciones_validas)
-    if filtradas != actuales:
-        st.session_state[key_widget] = filtradas
+def default_filtrado(key_name, opciones_actuales, fallback_todas):
+    """Devuelve el default inicial si el widget aún no existe en session_state."""
+    if key_name in st.session_state:
+        return None
+    return [x for x in fallback_todas if x in opciones_actuales]
 
 
 def sintesis_dimension(ejes_df, modo, dimension):
@@ -1185,38 +1116,56 @@ with st.sidebar:
     )
 
 # =====================================================
-# VISTA 1: VISTA POR ASESOR (FILTRADO EN CASCADA)
+# VISTA 1: VISTA POR ASESOR
 # =====================================================
 if seccion == "Vista por asesor":
     st.subheader("Vista por asesor")
 
-    sincronizar_multiselect("va_anio", años_disp)
-    sincronizar_multiselect("va_mes", meses_disp)
-
     f1, f2, f3, f4 = st.columns(4)
     with f1:
-        a_anios_sel = st.multiselect("Año", options=años_disp, key="va_anio")
+        a_anios_sel = st.multiselect(
+            "Año",
+            options=años_disp,
+            default=default_filtrado("va_anio", años_disp, años_disp),
+            key="va_anio"
+        )
     with f2:
-        a_meses_sel = st.multiselect("Mes", options=meses_disp, key="va_mes")
+        a_meses_sel = st.multiselect(
+            "Mes",
+            options=meses_disp,
+            default=default_filtrado("va_mes", meses_disp, meses_disp),
+            key="va_mes"
+        )
 
-    # Calcular campañas y asesores disponibles en cascada según Año + Mes
-    _, camps_cascada_a, _ = filtrar_cascada(
-        df, a_anios_sel, a_meses_sel, camps_sel=camp_disp, ases_sel=None
+    _, camps_cascada_a, _ = calcular_opciones_y_filtrar(
+        df, a_anios_sel, a_meses_sel, camps_sel=None, ases_sel=None
     )
-    sincronizar_multiselect("va_camp", camps_cascada_a)
+    camps_prev_a = st.session_state.get("va_camp", camp_disp)
+    camps_opciones_a = sorted(set(camps_cascada_a) | set(c for c in camps_prev_a if c in camp_disp))
 
     with f3:
-        a_camps_sel = st.multiselect("Campaña", options=camps_cascada_a, key="va_camp")
+        a_camps_sel = st.multiselect(
+            "Campaña",
+            options=camps_opciones_a,
+            default=default_filtrado("va_camp", camps_opciones_a, camps_cascada_a),
+            key="va_camp"
+        )
 
-    _, _, ases_cascada_a = filtrar_cascada(
+    _, _, ases_cascada_a = calcular_opciones_y_filtrar(
         df, a_anios_sel, a_meses_sel, camps_sel=a_camps_sel, ases_sel=None
     )
-    sincronizar_multiselect("va_ases", ases_cascada_a)
+    ases_prev_a = st.session_state.get("va_ases", ases_disp)
+    ases_opciones_a = sorted(set(ases_cascada_a) | set(a for a in ases_prev_a if a in ases_disp))
 
     with f4:
-        a_ases_sel = st.multiselect("Asesor", options=ases_cascada_a, key="va_ases")
+        a_ases_sel = st.multiselect(
+            "Asesor",
+            options=ases_opciones_a,
+            default=default_filtrado("va_ases", ases_opciones_a, ases_cascada_a),
+            key="va_ases"
+        )
 
-    filtrado_ases, _, _ = filtrar_cascada(
+    filtrado_ases, _, _ = calcular_opciones_y_filtrar(
         df, a_anios_sel, a_meses_sel, camps_sel=a_camps_sel, ases_sel=a_ases_sel
     )
 
@@ -1302,24 +1251,37 @@ if seccion == "Vista por asesor":
 elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
 
-    sincronizar_multiselect("ve_anio", años_disp)
-    sincronizar_multiselect("ve_mes", meses_disp)
-
     fe1, fe2, fe3 = st.columns(3)
     with fe1:
-        e_anios_sel = st.multiselect("Año", options=años_disp, key="ve_anio")
+        e_anios_sel = st.multiselect(
+            "Año",
+            options=años_disp,
+            default=default_filtrado("ve_anio", años_disp, años_disp),
+            key="ve_anio"
+        )
     with fe2:
-        e_meses_sel = st.multiselect("Mes", options=meses_disp, key="ve_mes")
+        e_meses_sel = st.multiselect(
+            "Mes",
+            options=meses_disp,
+            default=default_filtrado("ve_mes", meses_disp, meses_disp),
+            key="ve_mes"
+        )
 
-    _, camps_cascada_e, _ = filtrar_cascada(
-        df, e_anios_sel, e_meses_sel, camps_sel=camp_disp, ases_sel=None
+    _, camps_cascada_e, _ = calcular_opciones_y_filtrar(
+        df, e_anios_sel, e_meses_sel, camps_sel=None, ases_sel=None
     )
-    sincronizar_multiselect("ve_camp", camps_cascada_e)
+    camps_prev_e = st.session_state.get("ve_camp", camp_disp)
+    camps_opciones_e = sorted(set(camps_cascada_e) | set(c for c in camps_prev_e if c in camp_disp))
 
     with fe3:
-        e_camps_sel = st.multiselect("Campaña", options=camps_cascada_e, key="ve_camp")
+        e_camps_sel = st.multiselect(
+            "Campaña",
+            options=camps_opciones_e,
+            default=default_filtrado("ve_camp", camps_opciones_e, camps_cascada_e),
+            key="ve_camp"
+        )
 
-    base_emp, _, _ = filtrar_cascada(
+    base_emp, _, _ = calcular_opciones_y_filtrar(
         df, e_anios_sel, e_meses_sel, camps_sel=e_camps_sel, ases_sel=None
     )
 
@@ -1376,32 +1338,51 @@ elif seccion == "Vista por empresa":
 else:
     st.subheader("Detalle por auditoria")
 
-    sincronizar_multiselect("da_anio", años_disp)
-    sincronizar_multiselect("da_mes", meses_disp)
-
     fd1, fd2, fd3, fd4 = st.columns(4)
     with fd1:
-        d_anios_sel = st.multiselect("Año", options=años_disp, key="da_anio")
+        d_anios_sel = st.multiselect(
+            "Año",
+            options=años_disp,
+            default=default_filtrado("da_anio", años_disp, años_disp),
+            key="da_anio"
+        )
     with fd2:
-        d_meses_sel = st.multiselect("Mes", options=meses_disp, key="da_mes")
+        d_meses_sel = st.multiselect(
+            "Mes",
+            options=meses_disp,
+            default=default_filtrado("da_mes", meses_disp, meses_disp),
+            key="da_mes"
+        )
 
-    _, camps_cascada_d, _ = filtrar_cascada(
-        df, d_anios_sel, d_meses_sel, camps_sel=camp_disp, ases_sel=None
+    _, camps_cascada_d, _ = calcular_opciones_y_filtrar(
+        df, d_anios_sel, d_meses_sel, camps_sel=None, ases_sel=None
     )
-    sincronizar_multiselect("da_camp", camps_cascada_d)
+    camps_prev_d = st.session_state.get("da_camp", camp_disp)
+    camps_opciones_d = sorted(set(camps_cascada_d) | set(c for c in camps_prev_d if c in camp_disp))
 
     with fd3:
-        d_camps_sel = st.multiselect("Campaña", options=camps_cascada_d, key="da_camp")
+        d_camps_sel = st.multiselect(
+            "Campaña",
+            options=camps_opciones_d,
+            default=default_filtrado("da_camp", camps_opciones_d, camps_cascada_d),
+            key="da_camp"
+        )
 
-    _, _, ases_cascada_d = filtrar_cascada(
+    _, _, ases_cascada_d = calcular_opciones_y_filtrar(
         df, d_anios_sel, d_meses_sel, camps_sel=d_camps_sel, ases_sel=None
     )
-    sincronizar_multiselect("da_ases", ases_cascada_d)
+    ases_prev_d = st.session_state.get("da_ases", ases_disp)
+    ases_opciones_d = sorted(set(ases_cascada_d) | set(a for a in ases_prev_d if a in ases_disp))
 
     with fd4:
-        d_ases_sel = st.multiselect("Asesor", options=ases_cascada_d, key="da_ases")
+        d_ases_sel = st.multiselect(
+            "Asesor",
+            options=ases_opciones_d,
+            default=default_filtrado("da_ases", ases_opciones_d, ases_cascada_d),
+            key="da_ases"
+        )
 
-    filtrado_det, _, _ = filtrar_cascada(
+    filtrado_det, _, _ = calcular_opciones_y_filtrar(
         df, d_anios_sel, d_meses_sel, camps_sel=d_camps_sel, ases_sel=d_ases_sel
     )
 
