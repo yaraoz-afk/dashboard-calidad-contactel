@@ -148,7 +148,7 @@ ul[role="listbox"] * {{
     color: #ffffff !important;
 }}
 
-/* Tarjeta compacta por asesor tipo informe */
+/* Tarjeta compacta por asesor / campaña */
 .card-asesor {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -198,6 +198,14 @@ ul[role="listbox"] * {{
     margin-bottom: 8px;
     font-size: 12.5px;
 }}
+.sec-neutro {{
+    background: #f8fafc;
+    border-left: 4px solid #334155;
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+}}
 .comentario-card {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -210,6 +218,7 @@ ul[role="listbox"] * {{
 .t-verde {{ color: #15803d; font-weight: 700; }}
 .t-rojo {{ color: #b91c1c; font-weight: 700; }}
 .t-naranja {{ color: #c2410c; font-weight: 700; }}
+.t-neutro {{ color: #1e293b; font-weight: 700; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -611,7 +620,7 @@ def resumen_ejes_criterios(df_crit):
         if row["% Crítico_num"] >= 20 or row["Criticos"] >= 3:
             return "Crítico"
         if row["% Mejora_num"] >= 15 or row["Mejoras"] >= 2:
-            return "En Desarrollo"
+            return "A mejorar"
         return "Positivo"
 
     res["Estado"] = res.apply(clasificar, axis=1)
@@ -660,22 +669,25 @@ with st.sidebar:
     ases_disp = sorted(df["Asesor"].dropna().unique())
     ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="filtro_ases")
 
-# Filtro estricto por Año y Mes (ej. 2025 y 2026 + Septiembre => solo Septiembre de 2025 y 2026)
+todos_anios_sel = (set(años_sel) == set(años_disp)) if años_disp else True
+todos_meses_sel = (set(meses_sel) == set(meses_disp)) if meses_disp else True
+todas_camp_sel = (set(camp_sel) == set(camp_disp)) if camp_disp else True
+todos_ases_sel = (set(ases_sel) == set(ases_disp)) if ases_disp else True
+
 base_tiempo = df.copy()
-if años_sel:
+if años_sel and not todos_anios_sel:
     base_tiempo = base_tiempo[base_tiempo["Año"].isin(años_sel)]
-if meses_sel:
+if meses_sel and not todos_meses_sel:
     base_tiempo = base_tiempo[base_tiempo["Mes"].isin(meses_sel)]
 
 filtrado = base_tiempo.copy()
-if camp_sel:
+if camp_sel and not todas_camp_sel:
     filtrado = filtrado[filtrado["Campaña"].isin(camp_sel)]
-if ases_sel:
+if ases_sel and not todos_ases_sel:
     filtrado = filtrado[filtrado["Asesor"].isin(ases_sel)]
 
-# Para análisis por asesor: toma todas las campañas del asesor seleccionado dentro de los años y meses elegidos
 base_asesor_analisis = base_tiempo.copy()
-if ases_sel:
+if ases_sel and not todos_ases_sel:
     base_asesor_analisis = base_asesor_analisis[base_asesor_analisis["Asesor"].isin(ases_sel)]
 
 if filtrado.empty and base_asesor_analisis.empty:
@@ -685,14 +697,14 @@ if filtrado.empty and base_asesor_analisis.empty:
 detalle_asesores_completo = construir_detalle_criterios(base_asesor_analisis)
 
 # =====================================================
-# INDICADORES SUPERIORES (TOTALES vs FILTRADOS)
+# INDICADORES SUPERIORES
 # =====================================================
 st.subheader("Resumen de métricas")
 k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Auditorías filtradas", len(filtrado), delta=f"Total: {len(df)}")
+k1.metric("Auditorías", len(filtrado), delta=f"Total Sheet: {len(df)}")
 k2.metric("Calidad promedio", fmt_pct(filtrado["Puntaje final"].mean() if not filtrado.empty else base_asesor_analisis["Puntaje final"].mean()))
-k3.metric("Asesores filtrados", filtrado["Asesor"].nunique() if not filtrado.empty else 0, delta=f"Total: {df['Asesor'].nunique()}")
-k4.metric("Campañas filtradas", filtrado["Campaña"].nunique() if not filtrado.empty else 0, delta=f"Total: {df['Campaña'].nunique()}")
+k3.metric("Asesores", filtrado["Asesor"].nunique() if not filtrado.empty else 0, delta=f"Total Sheet: {df['Asesor'].nunique()}")
+k4.metric("Campañas", filtrado["Campaña"].nunique() if not filtrado.empty else 0, delta=f"Total Sheet: {df['Campaña'].nunique()}")
 k5.metric("Promedio total Sheet", fmt_pct(df["Puntaje final"].mean()))
 
 st.divider()
@@ -729,9 +741,9 @@ if seccion == "Por Asesor":
             des_df = ejes_a[ejes_a["% Mejora_num"] > 0] if not ejes_a.empty else pd.DataFrame()
             pos_df = ejes_a.sort_values("% Positivo_num", ascending=False) if not ejes_a.empty else pd.DataFrame()
 
-            txt_pos = "<br>".join([f"• {r['Criterio']} (Pos: {r['% Positivo']} | Mej: {r['% Mejora']} | Crit: {r['% Crítico']})" for _, r in pos_df.iterrows()]) if not pos_df.empty else "• Sin datos positivos."
-            txt_crit = "<br>".join([f"• {r['Criterio']} (Crit: {r['% Crítico']} | Mej: {r['% Mejora']} | Pos: {r['% Positivo']})" for _, r in crit_df.iterrows()]) if not crit_df.empty else "• Sin puntos críticos."
-            txt_des = "<br>".join([f"• {r['Criterio']} (Mej: {r['% Mejora']} | Crit: {r['% Crítico']} | Pos: {r['% Positivo']})" for _, r in des_df.iterrows()]) if not des_df.empty else "• Sin puntos en desarrollo."
+            txt_pos = "<br>".join([f"• {r['Criterio']}" for _, r in pos_df.iterrows()]) if not pos_df.empty else "• Sin puntos positivos."
+            txt_crit = "<br>".join([f"• {r['Criterio']}" for _, r in crit_df.iterrows()]) if not crit_df.empty else "• Sin puntos críticos."
+            txt_des = "<br>".join([f"• {r['Criterio']}" for _, r in des_df.iterrows()]) if not des_df.empty else "• Sin puntos a mejorar."
 
             rec_asesor = (
                 RECOMENDACIONES_CRITERIO.get(crit_df.iloc[0]["Criterio"], "Sostener práctica guiada.")
@@ -745,7 +757,7 @@ if seccion == "Por Asesor":
                     Auds=("Puntaje final", "count")
                 )
                 .sort_values("Auds", ascending=False)
-                .assign(txt=lambda d: d["Campaña"] + " (" + d["Calidad"].apply(fmt_pct) + " · " + d["Auds"].astype(str) + ")")["txt"]
+                .assign(txt=lambda d: d["Campaña"] + " (" + d["Calidad"].apply(fmt_pct) + ")")["txt"]
                 .tolist()
             )
             txt_camp = ", ".join(camp_hist) if camp_hist else "Sin campañas"
@@ -760,23 +772,23 @@ if seccion == "Por Asesor":
                     f'<span class="t-naranja">Mej {pct_mej}</span> · '
                     f'<span class="t-rojo">Crit {pct_crit}</span>'
                     f'</div>'
-                    f'<div class="sec-verde"><div class="t-verde">VERDE (Fortalezas / Positivos)</div>{txt_pos}</div>'
-                    f'<div class="sec-rojo"><div class="t-rojo">ROJO (Crítico a Trabajar)</div>{txt_crit}</div>'
-                    f'<div class="sec-naranja"><div class="t-naranja">NARANJA (En Desarrollo / Mejora)</div>{txt_des}</div>'
-                    f'<div style="font-size:12px; margin-bottom:6px;"><b>Histórico campañas ({sub_a["Campaña"].nunique()}):</b> {txt_camp}</div>'
+                    f'<div class="sec-verde"><div class="t-verde">PUNTOS POSITIVOS</div>{txt_pos}</div>'
+                    f'<div class="sec-rojo"><div class="t-rojo">PUNTOS CRÍTICOS</div>{txt_crit}</div>'
+                    f'<div class="sec-naranja"><div class="t-naranja">PUNTOS A MEJORAR</div>{txt_des}</div>'
+                    f'<div style="font-size:12px; margin-bottom:6px;"><b>Histórico campañas:</b> {txt_camp}</div>'
                     f'<div style="font-size:12px;"><b>Recomendación:</b> {rec_asesor}</div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
 
     st.markdown("### Histórico de campañas por asesor seleccionado")
-    hist_ases_camp = base_asesor_analisis.groupby(["Asesor", "Campaña", "Mes", "Mes_orden"], as_index=False).agg(
+    hist_ases_camp = base_asesor_analisis.groupby(["Año", "Campaña", "Mes", "Mes_orden", "Asesor"], as_index=False).agg(
         Auditorías=("Puntaje final", "count"),
         Calidad_num=("Puntaje final", "mean")
-    ).sort_values(["Asesor", "Campaña", "Mes_orden"])
+    ).sort_values(["Año", "Mes_orden", "Campaña", "Asesor"])
     if not hist_ases_camp.empty:
         hist_ases_camp["Calidad"] = hist_ases_camp["Calidad_num"].apply(fmt_pct)
-        mostrar_tabla(hist_ases_camp[["Asesor", "Campaña", "Mes", "Auditorías", "Calidad"]])
+        mostrar_tabla(hist_ases_camp[["Año", "Mes", "Campaña", "Asesor", "Auditorías", "Calidad"]])
 
 # =====================================================
 # VISTA 2: EMPRESA
@@ -792,56 +804,55 @@ elif seccion == "Empresa":
         key="filtro_meses_empresa_vista"
     )
 
+    todos_anios_emp = (set(años_sel) == set(años_disp)) if años_disp else True
+    todos_meses_emp = (set(meses_emp_sel) == set(meses_emp_disp)) if meses_emp_disp else True
+
     base_emp = df.copy()
-    if años_sel:
+    if años_sel and not todos_anios_emp:
         base_emp = base_emp[base_emp["Año"].isin(años_sel)]
-    if meses_emp_sel:
+    if meses_emp_sel and not todos_meses_emp:
         base_emp = base_emp[base_emp["Mes"].isin(meses_emp_sel)]
+
+    total_aud_emp = len(df) if (todos_anios_emp and todos_meses_emp) else len(base_emp)
 
     e1, e2, e3, e4 = st.columns(4)
     e1.metric("Calidad empresa", fmt_pct(base_emp["Puntaje final"].mean()))
-    e2.metric("Auditorías", len(base_emp), delta=f"Total Sheet: {len(df)}")
+    e2.metric("Auditorías", total_aud_emp, delta=f"Total Sheet: {len(df)}")
     e3.metric("Campañas", base_emp["Campaña"].nunique(), delta=f"Total Sheet: {df['Campaña'].nunique()}")
     e4.metric("Asesores", base_emp["Asesor"].nunique(), delta=f"Total Sheet: {df['Asesor'].nunique()}")
 
-    g_emp1, g_emp2 = st.columns(2)
+    # Único gráfico: Campaña, Mes y línea de porcentajes
+    st.markdown("### Histórico por campaña y mes (Calidad %)")
+    hist_emp_camp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Año", "Mes", "Mes_orden", "Campaña"], as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values(["Año", "Mes_orden", "Campaña"])
 
-    with g_emp1:
-        hist_emp_mes = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Mes", "Mes_orden"], as_index=False).agg(
-            Auditorías=("Puntaje final", "count"),
-            Calidad_num=("Puntaje final", "mean")
-        ).sort_values("Mes_orden")
-        if not hist_emp_mes.empty:
-            hist_emp_mes["Calidad"] = hist_emp_mes["Calidad_num"].apply(fmt_pct)
-            fig_em = px.line(
-                hist_emp_mes, x="Mes", y="Calidad_num", markers=True,
-                labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"},
-                color_discrete_sequence=[VERDE_PRINCIPAL]
-            )
-            st.plotly_chart(
-                estilo_grafico(fig_em, "Histórico mensual de calidad | Empresa", "Mes", "Calidad", es_porcentaje_y=True),
-                use_container_width=True
-            )
-            mostrar_tabla(hist_emp_mes[["Mes", "Auditorías", "Calidad"]])
+    if not hist_emp_camp.empty:
+        hist_emp_camp["Calidad"] = hist_emp_camp["Calidad_num"].apply(fmt_pct)
+        fig_ec = px.line(
+            hist_emp_camp, x="Mes", y="Calidad_num", color="Campaña", markers=True,
+            labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
+        )
+        st.plotly_chart(
+            estilo_grafico(fig_ec, "Campaña y mes — Porcentaje de calidad", "Mes", "Calidad", es_porcentaje_y=True),
+            use_container_width=True
+        )
 
-    with g_emp2:
-        hist_emp_camp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Mes", "Mes_orden", "Campaña"], as_index=False).agg(
-            Auditorías=("Puntaje final", "count"),
-            Calidad_num=("Puntaje final", "mean")
-        ).sort_values(["Mes_orden", "Campaña"])
-        if not hist_emp_camp.empty:
-            hist_emp_camp["Calidad"] = hist_emp_camp["Calidad_num"].apply(fmt_pct)
-            fig_ec = px.line(
-                hist_emp_camp, x="Mes", y="Calidad_num", color="Campaña", markers=True,
-                labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
-            )
-            st.plotly_chart(
-                estilo_grafico(fig_ec, "Histórico por campaña y mes | Empresa", "Mes", "Calidad", es_porcentaje_y=True),
-                use_container_width=True
-            )
-            mostrar_tabla(hist_emp_camp[["Mes", "Campaña", "Auditorías", "Calidad"]])
+    # Cuadro de auditorías en Empresa: Año, Mes, Auditorías, Porcentaje
+    st.markdown("### Cuadro de auditorías por año y mes")
+    cuadro_emp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Año", "Mes", "Mes_orden"], as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values(["Año", "Mes_orden"])
+    if not cuadro_emp.empty:
+        cuadro_emp["Calidad"] = cuadro_emp["Calidad_num"].apply(fmt_pct)
+        mostrar_tabla(cuadro_emp[["Año", "Mes", "Auditorías", "Calidad"]])
+    else:
+        mostrar_tabla(pd.DataFrame(columns=["Año", "Mes", "Auditorías", "Calidad"]))
 
-    st.markdown("### Ejes de trabajo por campaña (Críticos, Mejoras y Positivos)")
+    # Tarjetas por campaña: porcentaje promedio según selección previa, positivos, a mejorar, críticos (sin porcentajes), ejes y recomendaciones
+    st.markdown("### Tarjetas por campaña")
     crit_emp = construir_detalle_criterios(base_emp)
     campañas_emp = sorted(base_emp["Campaña"].unique())
 
@@ -852,22 +863,40 @@ elif seccion == "Empresa":
             sub_c = base_emp[base_emp["Campaña"] == nom_c]
             ejes_c = resumen_ejes_criterios(crit_emp[crit_emp["Campaña"] == nom_c])
 
+            prom_camp_sel = fmt_pct(sub_c["Puntaje final"].mean())
             crit_c = ejes_c[ejes_c["Estado"] == "Crítico"] if not ejes_c.empty else pd.DataFrame()
-            mej_c = ejes_c[ejes_c["Estado"] == "En Desarrollo"] if not ejes_c.empty else pd.DataFrame()
+            mej_c = ejes_c[ejes_c["Estado"] == "A mejorar"] if not ejes_c.empty else pd.DataFrame()
             pos_c = ejes_c[ejes_c["Estado"] == "Positivo"] if not ejes_c.empty else pd.DataFrame()
 
-            b_crit = "<br>".join([f"• {r['Criterio']} (Crit: {r['% Crítico']} | Mej: {r['% Mejora']} | Pos: {r['% Positivo']})" for _, r in crit_c.iterrows()]) if not crit_c.empty else "• Sin críticos."
-            b_mej = "<br>".join([f"• {r['Criterio']} (Mej: {r['% Mejora']} | Crit: {r['% Crítico']} | Pos: {r['% Positivo']})" for _, r in mej_c.iterrows()]) if not mej_c.empty else "• Sin puntos de mejora."
-            b_pos = "<br>".join([f"• {r['Criterio']} (Pos: {r['% Positivo']} | Mej: {r['% Mejora']} | Crit: {r['% Crítico']})" for _, r in pos_c.iterrows()]) if not pos_c.empty else "• Sin positivos destacados."
+            b_pos = "<br>".join([f"• {r['Criterio']}" for _, r in pos_c.iterrows()]) if not pos_c.empty else "• Sin puntos positivos."
+            b_mej = "<br>".join([f"• {r['Criterio']}" for _, r in mej_c.iterrows()]) if not mej_c.empty else "• Sin puntos a mejorar."
+            b_crit = "<br>".join([f"• {r['Criterio']}" for _, r in crit_c.iterrows()]) if not crit_c.empty else "• Sin puntos críticos."
+
+            ejes_lista = []
+            if not crit_c.empty:
+                ejes_lista.append(f"Crítico: {crit_c.iloc[0]['Criterio']} ({crit_c.iloc[0]['Dimensión']})")
+            if not mej_c.empty:
+                ejes_lista.append(f"A mejorar: {mej_c.iloc[0]['Criterio']} ({mej_c.iloc[0]['Dimensión']})")
+            if not pos_c.empty:
+                ejes_lista.append(f"Positivo: {pos_c.iloc[0]['Criterio']} ({pos_c.iloc[0]['Dimensión']})")
+            b_ejes = "<br>".join([f"• {e}" for e in ejes_lista]) if ejes_lista else "• Sin ejes definidos."
+
+            foco_rec = (
+                crit_c.iloc[0]["Criterio"] if not crit_c.empty
+                else (mej_c.iloc[0]["Criterio"] if not mej_c.empty else (pos_c.iloc[0]["Criterio"] if not pos_c.empty else None))
+            )
+            rec_camp = RECOMENDACIONES_CRITERIO.get(foco_rec, "Mantener seguimiento continuo y coaching de calidad.") if foco_rec else "Mantener seguimiento continuo."
 
             with cols_c[idx_c]:
                 st.markdown(
                     f'<div class="card-asesor">'
                     f'<div class="card-asesor-titulo">{nom_c}</div>'
-                    f'<div class="card-asesor-sub">Calidad: {fmt_pct(sub_c["Puntaje final"].mean())} | Auditorías: {len(sub_c)}</div>'
-                    f'<div class="sec-rojo"><div class="t-rojo">CRÍTICOS</div>{b_crit}</div>'
-                    f'<div class="sec-naranja"><div class="t-naranja">PUNTOS DE MEJORA</div>{b_mej}</div>'
-                    f'<div class="sec-verde"><div class="t-verde">POSITIVOS</div>{b_pos}</div>'
+                    f'<div class="card-asesor-sub">Promedio selección: {prom_camp_sel} | Auditorías: {len(sub_c)}</div>'
+                    f'<div class="sec-verde"><div class="t-verde">PUNTOS POSITIVOS</div>{b_pos}</div>'
+                    f'<div class="sec-naranja"><div class="t-naranja">PUNTOS A MEJORAR</div>{b_mej}</div>'
+                    f'<div class="sec-rojo"><div class="t-rojo">PUNTOS CRÍTICOS</div>{b_crit}</div>'
+                    f'<div class="sec-neutro"><div class="t-neutro">EJES DE TRABAJO</div>{b_ejes}</div>'
+                    f'<div style="font-size:12px;"><b>Recomendaciones:</b> {rec_camp}</div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -878,7 +907,7 @@ elif seccion == "Empresa":
 else:
     st.subheader("Detalle de auditorías")
     columnas_detalle = [
-        "Fecha", "Asesor", "Campaña", "Mes", "ID", "Tipo de gestión",
+        "Fecha", "Asesor", "Campaña", "Año", "Mes", "ID", "Tipo de gestión",
         "Tipificación", "Puntaje final", "Puntos a trabajar",
         "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
     ]
@@ -888,7 +917,7 @@ else:
     detalle = detalle.sort_values("Fecha", ascending=False, na_position="last")
 
     mostrar_tabla(detalle[[
-        "Fecha_str", "Asesor", "Campaña", "Mes", "ID", "Tipo de gestión",
+        "Fecha_str", "Asesor", "Campaña", "Año", "Mes", "ID", "Tipo de gestión",
         "Tipificación", "Calidad", "Puntos a trabajar",
         "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
     ]])
@@ -903,7 +932,7 @@ else:
         for _, fila_d in con_comentarios.iterrows():
             st.markdown(
                 f'<div class="comentario-card">'
-                f'<b>{fila_d["Asesor"]}</b> — {fila_d["Campaña"]} ({fila_d["Fecha_str"]} | {fila_d["Mes"]} | Calidad: {fila_d["Calidad"]})<br>'
+                f'<b>{fila_d["Asesor"]}</b> — {fila_d["Campaña"]} ({fila_d["Fecha_str"]} | {fila_d["Año"]} - {fila_d["Mes"]} | Calidad: {fila_d["Calidad"]})<br>'
                 f'<b>Puntos a trabajar:</b> {fila_d["Puntos a trabajar"] if fila_d["Puntos a trabajar"] else "Sin registro"}<br>'
                 f'<b>Observaciones:</b> {fila_d["Observaciones"] if fila_d["Observaciones"] else "Sin registro"}'
                 f'</div>',
