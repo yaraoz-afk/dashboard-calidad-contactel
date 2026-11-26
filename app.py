@@ -83,53 +83,63 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     font-weight: 700;
 }}
 
-/* Caja del select/multiselect cerrada: sin cortes, con wrap completo */
+/* Contenedor del multiselect: muestra todas las opciones elegidas completas */
+div[data-testid="stMultiSelect"],
+div[data-testid="stMultiSelect"] > div,
 div[data-testid="stMultiSelect"] > div > div,
+div[data-baseweb="select"],
 div[data-baseweb="select"] > div {{
     background-color: {GRIS_DESPLEGABLE} !important;
     color: #000000 !important;
-    border: 1px solid #94a3b8 !important;
+    border-color: #94a3b8 !important;
     border-radius: 6px !important;
     min-height: 42px !important;
     height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
+}}
+div[data-baseweb="select"] > div > div {{
+    display: flex !important;
     flex-wrap: wrap !important;
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 4px 6px !important;
 }}
 div[data-testid="stMultiSelect"] input,
-div[data-testid="stMultiSelect"] span,
-div[data-baseweb="select"] input,
-div[data-baseweb="select"] span {{
+div[data-baseweb="select"] input {{
     color: #000000 !important;
+    min-width: 90px !important;
 }}
 div[data-baseweb="select"] svg {{
     fill: #0f172a !important;
     color: #0f172a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }}
 
-/* Tags seleccionados en verde #30b44e con texto blanco y sin recortes */
-div[data-baseweb="select"] span[data-baseweb="tag"],
-div[data-baseweb="select"] div[data-baseweb="tag"],
+/* Cada opción elegida (tag) visible completa con su botón × para eliminarla */
 span[data-baseweb="tag"],
 div[data-baseweb="tag"] {{
     background-color: {VERDE_PRINCIPAL} !important;
     background: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
     border: 1px solid {VERDE_OSCURO} !important;
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     max-width: 100% !important;
     height: auto !important;
-    min-height: 26px !important;
-    margin: 2px 4px 2px 0 !important;
-    padding: 2px 6px !important;
+    min-height: 28px !important;
+    padding: 3px 8px !important;
+    margin: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
+    gap: 6px !important;
+    overflow: visible !important;
 }}
-div[data-baseweb="select"] span[data-baseweb="tag"] span,
-div[data-baseweb="select"] div[data-baseweb="tag"] span,
-span[data-baseweb="tag"] span,
-div[data-baseweb="tag"] span {{
+span[data-baseweb="tag"] > span,
+div[data-baseweb="tag"] > span {{
     background-color: transparent !important;
     color: #ffffff !important;
     white-space: normal !important;
@@ -137,18 +147,25 @@ div[data-baseweb="tag"] span {{
     overflow: visible !important;
     text-overflow: clip !important;
     max-width: none !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
 }}
-div[data-baseweb="select"] span[data-baseweb="tag"] *,
-div[data-baseweb="select"] div[data-baseweb="tag"] *,
-span[data-baseweb="tag"] *,
-div[data-baseweb="tag"] * {{
+span[data-baseweb="tag"] [role="presentation"],
+div[data-baseweb="tag"] [role="presentation"],
+span[data-baseweb="tag"] svg,
+div[data-baseweb="tag"] svg {{
     background-color: transparent !important;
     color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
 }}
 
-/* Menú desplegable abierto (popover / listbox / opciones): fondo claro y texto negro */
+/* Menú desplegable abierto para elegir opciones */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] > div > div,
