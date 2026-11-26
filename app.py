@@ -836,35 +836,40 @@ def resumen_ejes_criterios(df_crit):
     return res.sort_values(["% Crítico_num", "% Mejora_num", "Descuento"], ascending=[False, False, False])
 
 
-def aplicar_filtros_libres(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
-                         todas_ases_disp=None):
-    """
-    Filtra por Año, Mes, Campaña y Asesor de forma libre:
-    - Si un filtro tiene selecciones, filtra por esos valores.
-    - Si se borra un filtro (queda vacío []), no filtra por ese campo.
-    - Devuelve además los asesores disponibles para la combinación actual de Año + Mes + Campaña.
-    """
+def filtrar_registros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
+                      todas_ases_disp=None):
     out = base_df.copy()
     if anios_sel:
         out = out[out["Año"].isin(anios_sel)]
     if meses_sel:
         out = out[out["Mes"].isin(meses_sel)]
 
-    base_ases_df = out.copy()
+    base_ases = out.copy()
     if camps_sel:
         claves_c = {normalizar_clave(c) for c in camps_sel}
-        base_ases_df = base_ases_df[base_ases_df["Campaña_key"].isin(claves_c)]
+        base_ases = base_ases[base_ases["Campaña_key"].isin(claves_c)]
         out = out[out["Campaña_key"].isin(claves_c)]
 
-    ases_disp_sel = sorted(base_ases_df["Asesor"].dropna().unique())
-    if not ases_disp_sel and todas_ases_disp:
-        ases_disp_sel = list(todas_ases_disp)
+    ases_opciones = sorted(base_ases["Asesor"].dropna().unique())
+    if not ases_opciones and todas_ases_disp:
+        ases_opciones = list(todas_ases_disp)
 
     if ases_sel is not None and ases_sel:
         claves_a = {normalizar_clave(a) for a in ases_sel}
         out = out[out["Asesor_key"].isin(claves_a)]
 
-    return out, ases_disp_sel
+    return out, ases_opciones
+
+
+def preparar_selector_asesor(key_asesor, key_firma, firma_actual, ases_opciones):
+    """
+    Actualiza los asesores seleccionados cuando cambia Año, Mes o Campaña,
+    pero permite al usuario modificar o borrar asesores libremente dentro del mismo filtro.
+    """
+    firma_anterior = st.session_state.get(key_firma)
+    if key_asesor not in st.session_state or firma_anterior != firma_actual:
+        st.session_state[key_asesor] = list(ases_opciones)
+        st.session_state[key_firma] = firma_actual
 
 
 def sintesis_dimension(ejes_df, modo, dimension):
@@ -1083,24 +1088,6 @@ def construir_deduccion_analitica_html(datos, contexto_label):
     )
 
 
-def render_aviso_sin_datos_campana(base_df, anios_sel, meses_sel, camps_sel):
-    if camps_sel:
-        claves_c = {normalizar_clave(c) for c in camps_sel}
-        df_c_total = base_df[base_df["Campaña_key"].isin(claves_c)]
-        if not df_c_total.empty:
-            resumen_c = []
-            for c_nom in camps_sel:
-                sub_c = base_df[base_df["Campaña_key"] == normalizar_clave(c_nom)]
-                periodos = sorted({f"{r['Año']} - {r['Mes']}" for _, r in sub_c.iterrows()})
-                resumen_c.append(f"**{c_nom}**: {len(sub_c)} auditoría(s) en total ({', '.join(periodos[:4])})")
-            st.warning(
-                "No hay auditorías para los filtros seleccionados (**Año / Mes / Asesor**). "
-                "Detalle en el Sheet para la campaña elegida: " + " | ".join(resumen_c)
-            )
-            return
-    st.warning("No hay auditorías para los filtros seleccionados.")
-
-
 # =====================================================
 # CARGA DE DATOS
 # =====================================================
@@ -1149,22 +1136,21 @@ if seccion == "Vista por asesor":
     with f3:
         a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="va_camp")
 
-    _, ases_opciones_a = aplicar_filtros_libres(
+    _, ases_opciones_a = filtrar_registros(
         df, a_anios_sel, a_meses_sel, a_camps_sel, ases_sel=None,
         todas_ases_disp=ases_disp
     )
-
-    if "va_ases" not in st.session_state:
-        st.session_state["va_ases"] = [a for a in ases_disp if a in ases_opciones_a]
+    firma_a = (
+        tuple(a_anios_sel or []),
+        tuple(a_meses_sel or []),
+        tuple(normalizar_clave(c) for c in (a_camps_sel or []))
+    )
+    preparar_selector_asesor("va_ases", "va_firma_filtro", firma_a, ases_opciones_a)
 
     with f4:
-        a_ases_sel = st.multiselect(
-            "Asesor",
-            options=ases_opciones_a,
-            key="va_ases"
-        )
+        a_ases_sel = st.multiselect("Asesor", options=ases_opciones_a, key="va_ases")
 
-    filtrado_ases, _ = aplicar_filtros_libres(
+    filtrado_ases, _ = filtrar_registros(
         df, a_anios_sel, a_meses_sel, a_camps_sel, ases_sel=a_ases_sel,
         todas_ases_disp=ases_disp
     )
@@ -1176,7 +1162,7 @@ if seccion == "Vista por asesor":
     k4.metric("Campañas", filtrado_ases["Campaña"].nunique(), delta=f"Total Sheet: {df['Campaña'].nunique()}")
 
     if filtrado_ases.empty:
-        render_aviso_sin_datos_campana(df, a_anios_sel, a_meses_sel, a_camps_sel)
+        st.warning("No hay auditorías para los filtros seleccionados.")
         st.stop()
 
     detalle_ases = construir_detalle_criterios(filtrado_ases)
@@ -1259,7 +1245,7 @@ elif seccion == "Vista por empresa":
     with fe3:
         e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ve_camp")
 
-    base_emp, _ = aplicar_filtros_libres(
+    base_emp, _ = filtrar_registros(
         df, e_anios_sel, e_meses_sel, e_camps_sel, ases_sel=None,
         todas_ases_disp=ases_disp
     )
@@ -1278,7 +1264,7 @@ elif seccion == "Vista por empresa":
     e4.metric("Asesores", base_emp["Asesor"].nunique(), delta=f"Total Sheet: {df['Asesor'].nunique()}")
 
     if base_emp.empty:
-        render_aviso_sin_datos_campana(df, e_anios_sel, e_meses_sel, e_camps_sel)
+        st.warning("No hay registros a nivel empresa con los filtros seleccionados.")
         st.stop()
 
     st.markdown("### Histórico por campaña y mes (Calidad %)")
@@ -1325,28 +1311,27 @@ else:
     with fd3:
         d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
 
-    _, ases_opciones_d = aplicar_filtros_libres(
+    _, ases_opciones_d = filtrar_registros(
         df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=None,
         todas_ases_disp=ases_disp
     )
-
-    if "da_ases" not in st.session_state:
-        st.session_state["da_ases"] = [a for a in ases_disp if a in ases_opciones_d]
+    firma_d = (
+        tuple(d_anios_sel or []),
+        tuple(d_meses_sel or []),
+        tuple(normalizar_clave(c) for c in (d_camps_sel or []))
+    )
+    preparar_selector_asesor("da_ases", "da_firma_filtro", firma_d, ases_opciones_d)
 
     with fd4:
-        d_ases_sel = st.multiselect(
-            "Asesor",
-            options=ases_opciones_d,
-            key="da_ases"
-        )
+        d_ases_sel = st.multiselect("Asesor", options=ases_opciones_d, key="da_ases")
 
-    filtrado_det, _ = aplicar_filtros_libres(
+    filtrado_det, _ = filtrar_registros(
         df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=d_ases_sel,
         todas_ases_disp=ases_disp
     )
 
     if filtrado_det.empty:
-        render_aviso_sin_datos_campana(df, d_anios_sel, d_meses_sel, d_camps_sel)
+        st.warning("No hay auditorías con los filtros seleccionados.")
         st.stop()
 
     columnas_detalle = [
