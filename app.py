@@ -575,4 +575,664 @@ with f2:
 p1, p2 = st.columns([1.2, 1.8])
 
 if not df_con_fecha.empty:
-    fecha_min = df_con_
+    fecha_min = df_con_fecha["Fecha"].min().date()
+    fecha_max = df_con_fecha["Fecha"].max().date()
+else:
+    fecha_min = fecha_max = pd.Timestamp.today().date()
+
+with p1:
+    periodo = st.date_input(
+        "Período (seleccioná fecha inicio y fecha fin)",
+        value=(fecha_min, fecha_max),
+        min_value=fecha_min,
+        max_value=fecha_max,
+        format="DD/MM/YYYY",
+        key="filtro_rango_fechas"
+    )
+
+with p2:
+    meses_disponibles = sorted(
+        m for m in df["Mes"].dropna().unique() if m and m != "Sin mes"
+    )
+    meses_seleccionados = st.multiselect(
+        "Meses (podés elegir uno o varios, ej. agosto y septiembre para comparar)",
+        options=meses_disponibles,
+        default=[],
+        key="filtro_meses"
+    )
+
+if isinstance(periodo, tuple) and len(periodo) == 2:
+    fecha_inicio, fecha_fin = periodo
+elif isinstance(periodo, tuple) and len(periodo) == 1:
+    fecha_inicio = fecha_fin = periodo[0]
+else:
+    fecha_inicio, fecha_fin = fecha_min, fecha_max
+
+filtrado = df.copy()
+if campañas:
+    filtrado = filtrado[filtrado["Campaña"].isin(campañas)]
+if asesores:
+    filtrado = filtrado[filtrado["Asesor"].isin(asesores)]
+
+if not df_con_fecha.empty:
+    misma_rango_total = (fecha_inicio == fecha_min) and (fecha_fin == fecha_max)
+    if not misma_rango_total or meses_seleccionados:
+        filtrado = filtrado[
+            filtrado["Fecha"].isna() | filtrado["Fecha"].dt.date.between(fecha_inicio, fecha_fin)
+        ]
+
+if meses_seleccionados:
+    filtrado = filtrado[filtrado["Mes"].isin(meses_seleccionados)]
+
+if filtrado.empty:
+    st.warning("No hay registros con los filtros seleccionados.")
+    st.stop()
+
+detalle_filtrado = construir_detalle_criterios(filtrado)
+
+# =====================================================
+# INDICADORES GENERALES
+# =====================================================
+st.divider()
+st.subheader("Indicadores generales")
+
+k1, k2, k3, k4, k5 = st.columns(5)
+k1.metric("Auditorías filtradas", len(filtrado))
+k2.metric("Total en Sheet", len(df))
+promedio = filtrado["Puntaje final"].mean()
+k3.metric("Calidad promedio", fmt_pct(promedio))
+k4.metric("Asesores", filtrado["Asesor"].nunique())
+k5.metric("Campañas", filtrado["Campaña"].nunique())
+
+# =====================================================
+# COMPARATIVO AUTOMÁTICO CUANDO SE ELIGEN 2 O MÁS MESES
+# =====================================================
+if len(meses_seleccionados) >= 2:
+    st.divider()
+    st.subheader(f"Comparativo de meses seleccionados: {', '.join(sorted(meses_seleccionados))}")
+
+    comp_mes = filtrado.groupby("Mes", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Mes")
+    comp_mes["Calidad"] = comp_mes["Calidad_num"].apply(fmt_pct)
+
+    fig_comp = px.bar(
+        comp_mes, x="Mes", y="Calidad_num", text="Calidad",
+        labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"},
+        color_discrete_sequence=[VERDE_PRINCIPAL]
+    )
+    fig_comp.update_traces(textposition="outside")
+    st.plotly_chart(
+        estilo_grafico(fig_comp, "Comparativa de calidad por mes", "Mes", "Calidad", es_porcentaje_y=True),
+        use_container_width=True
+    )
+    mostrar_tabla(comp_mes[["Mes", "Auditorías", "Calidad"]])
+
+    comp_camp_mes = filtrado.groupby(["Mes", "Campaña"], as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values(["Campaña", "Mes"])
+    comp_camp_mes["Calidad"] = comp_camp_mes["Calidad_num"].apply(fmt_pct)
+
+    if not comp_camp_mes.empty:
+        fig_cm = px.bar(
+            comp_camp_mes, x="Campaña", y="Calidad_num", color="Mes",
+            barmode="group", text="Calidad",
+            labels={"Campaña": "Campaña", "Calidad_num": "Calidad (%)"}
+        )
+        fig_cm.update_traces(textposition="outside")
+        st.plotly_chart(
+            estilo_grafico(fig_cm, "Comparativa por campaña entre meses", "Campaña", "Calidad", es_porcentaje_y=True),
+            use_container_width=True
+        )
+        mostrar_tabla(comp_camp_mes[["Campaña", "Mes", "Auditorías", "Calidad"]])
+
+# =====================================================
+# PESTAÑAS
+# =====================================================
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "Resumen y evolución",
+    "Análisis por asesor",
+    "Por campaña",
+    "Histórico empresa",
+    "Histórico por asesor",
+    "Criterios y auditorías",
+    "Análisis y recomendaciones"
+])
+
+# =====================================================
+# 1. RESUMEN Y EVOLUCIÓN
+# =====================================================
+with tab1:
+    st.subheader("Evolución de calidad por campaña y por asesor")
+
+    e1, e2 = st.columns(2)
+    with e1:
+        camp_evol = st.multiselect(
+            "Campañas a graficar",
+            options=sorted(filtrado["Campaña"].unique()),
+            default=sorted(filtrado["Campaña"].unique()),
+            key="evol_camp_sel"
+        )
+    with e2:
+        ases_evol = st.multiselect(
+            "Asesores a graficar",
+            options=sorted(filtrado["Asesor"].unique()),
+            default=sorted(filtrado["Asesor"].unique())[:6],
+            key="evol_ases_sel"
+        )
+
+    base_evol = filtrado[
+        filtrado["Campaña"].isin(camp_evol) &
+        filtrado["Asesor"].isin(ases_evol) &
+        (filtrado["Mes"] != "Sin mes")
+    ].copy()
+
+    g1, g2 = st.columns(2)
+
+    with g1:
+        evol_camp = base_evol.groupby(["Mes", "Campaña"], as_index=False).agg(
+            Auditorías=("Puntaje final", "count"),
+            Calidad_num=("Puntaje final", "mean")
+        ).sort_values(["Mes", "Campaña"])
+        if not evol_camp.empty:
+            fig = px.line(
+                evol_camp, x="Mes", y="Calidad_num", color="Campaña", markers=True,
+                labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
+            )
+            st.plotly_chart(
+                estilo_grafico(fig, "Evolución mensual por campaña", "Mes", "Calidad", es_porcentaje_y=True),
+                use_container_width=True
+            )
+
+    with g2:
+        evol_ases = base_evol.groupby(["Mes", "Asesor"], as_index=False).agg(
+            Auditorías=("Puntaje final", "count"),
+            Calidad_num=("Puntaje final", "mean")
+        ).sort_values(["Mes", "Asesor"])
+        if not evol_ases.empty:
+            fig = px.line(
+                evol_ases, x="Mes", y="Calidad_num", color="Asesor", markers=True,
+                labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
+            )
+            st.plotly_chart(
+                estilo_grafico(fig, "Evolución mensual por asesor", "Mes", "Calidad", es_porcentaje_y=True),
+                use_container_width=True
+            )
+
+    st.subheader("Resultados por asesor")
+    tabla_asesores = filtrado.groupby("Asesor", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Calidad_num", ascending=False)
+    tabla_asesores["Calidad"] = tabla_asesores["Calidad_num"].apply(fmt_pct)
+
+    fig = px.bar(
+        tabla_asesores, x="Asesor", y="Calidad_num",
+        labels={"Calidad_num": "Calidad (%)", "Asesor": "Asesor"},
+        text="Calidad",
+        color_discrete_sequence=[VERDE_PRINCIPAL]
+    )
+    fig.update_traces(textposition="outside")
+    st.plotly_chart(
+        estilo_grafico(fig, "Calidad promedio por asesor", "Asesor", "Calidad", es_porcentaje_y=True),
+        use_container_width=True
+    )
+    mostrar_tabla(tabla_asesores[["Asesor", "Auditorías", "Calidad"]])
+
+    st.subheader("Resultados por tipo de gestión")
+    por_tipo = filtrado.assign(
+        Tipo=filtrado["Tipo normalizado"].fillna("Sin clasificar")
+    ).groupby("Tipo", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    )
+    por_tipo["Calidad"] = por_tipo["Calidad_num"].apply(fmt_pct)
+    mostrar_tabla(por_tipo[["Tipo", "Auditorías", "Calidad"]])
+
+# =====================================================
+# 2. ANÁLISIS POR ASESOR
+# =====================================================
+with tab2:
+    st.subheader("Análisis individual del asesor")
+    asesor = st.selectbox(
+        "Seleccionar asesor",
+        sorted(filtrado["Asesor"].unique()),
+        key="asesor_analisis"
+    )
+
+    individual = filtrado[filtrado["Asesor"] == asesor].copy()
+    criterios_individual = detalle_filtrado[
+        detalle_filtrado["Asesor"] == asesor
+    ].copy()
+
+    a1, a2, a3, a4 = st.columns(4)
+    a1.metric("Auditorías", len(individual))
+    a2.metric("Puntuación de calidad", fmt_pct(individual["Puntaje final"].mean()))
+    a3.metric("Puntos descontados", f"{criterios_individual['Descuento'].sum():.0f}")
+    a4.metric("Incumplimientos", int((criterios_individual["Respuesta"] == "no").sum()))
+
+    st.markdown("#### Aspectos críticos: Comerciales vs. Actitudinales")
+    res_dim = resumen_por_dimension(criterios_individual)
+
+    c_com, c_act = st.columns(2)
+    with c_com:
+        st.markdown('<span class="badge-critico">Aspectos críticos comerciales</span>', unsafe_allow_html=True)
+        top_com = res_dim[res_dim["Dimensión"] == "Comercial"].head(5)
+        mostrar_tabla(top_com[[
+            "Criterio", "Descuento", "Incumplimientos", "Mejoras", "% crítico"
+        ]], colorear=True)
+
+    with c_act:
+        st.markdown('<span class="badge-critico">Aspectos críticos actitudinales</span>', unsafe_allow_html=True)
+        top_act = res_dim[res_dim["Dimensión"] == "Actitudinal"].head(5)
+        mostrar_tabla(top_act[[
+            "Criterio", "Descuento", "Incumplimientos", "Mejoras", "% crítico"
+        ]], colorear=True)
+
+    st.markdown('<span class="badge-trabajar">Aspectos a trabajar reportados en auditoría</span>', unsafe_allow_html=True)
+    puntos_trabajar = individual[
+        individual["Puntos a trabajar"].str.strip() != ""
+    ][["Fecha", "Campaña", "Puntaje final", "Puntos a trabajar", "Observaciones"]].copy()
+    if not puntos_trabajar.empty:
+        puntos_trabajar["Calidad"] = puntos_trabajar["Puntaje final"].apply(fmt_pct)
+        puntos_trabajar["Fecha_str"] = puntos_trabajar["Fecha"].dt.strftime("%d/%m/%Y").fillna("Sin fecha")
+        puntos_trabajar = puntos_trabajar.sort_values("Fecha", ascending=False, na_position="last")
+        mostrar_tabla(puntos_trabajar[["Fecha_str", "Campaña", "Calidad", "Puntos a trabajar", "Observaciones"]])
+    else:
+        mostrar_tabla(pd.DataFrame())
+
+    st.markdown("#### Descuentos por criterio")
+    if not criterios_individual.empty:
+        descuentos = criterios_individual.groupby(["Criterio", "Dimensión"], as_index=False).agg(
+            Descuento=("Descuento", "sum"),
+            Evaluaciones=("Respuesta", "count"),
+            Incumplimientos=("Respuesta", lambda x: (x == "no").sum()),
+            Mejoras=("Respuesta", lambda x: (x == "punto de mejora").sum())
+        ).sort_values("Descuento", ascending=False)
+        descuentos["Descuento"] = descuentos["Descuento"].round(0).astype(int)
+
+        fig = px.bar(
+            descuentos, x="Descuento", y="Criterio", color="Dimensión", orientation="h",
+            labels={"Descuento": "Puntos descontados", "Criterio": "Criterio"},
+            color_discrete_map={"Comercial": ROJO_CRITICO, "Actitudinal": NARANJA_TRABAJAR}
+        )
+        st.plotly_chart(
+            estilo_grafico(fig, "Puntos descontados por criterio", "Puntos", "Criterio"),
+            use_container_width=True
+        )
+        mostrar_tabla(descuentos, colorear=True)
+
+        st.markdown('<span class="badge-trabajar">Reincidencias (a trabajar)</span>', unsafe_allow_html=True)
+        reinc = criterios_individual[
+            criterios_individual["Respuesta"].isin(["no", "punto de mejora"])
+        ].groupby(["Criterio", "Dimensión", "Respuesta"]).size().unstack(fill_value=0).reset_index()
+
+        if "no" not in reinc.columns:
+            reinc["no"] = 0
+        if "punto de mejora" not in reinc.columns:
+            reinc["punto de mejora"] = 0
+        reinc["Total de apariciones"] = reinc["no"] + reinc["punto de mejora"]
+        reinc = reinc.rename(columns={
+            "no": "Incumplimientos",
+            "punto de mejora": "Puntos de mejora"
+        }).sort_values("Total de apariciones", ascending=False)
+        mostrar_tabla(reinc, colorear=True)
+
+        st.markdown('<span class="badge-positivo">Fortalezas individuales (aspectos positivos)</span>', unsafe_allow_html=True)
+        fortalezas = criterios_individual.groupby(["Criterio", "Dimensión"], as_index=False).agg(
+            Evaluaciones=("Respuesta", "count"),
+            Cumplimientos=("Respuesta", lambda x: x.isin(["si", "sí"]).sum()),
+            N_A=("Respuesta", lambda x: (x == "n/a").sum())
+        )
+        fortalezas["% respuestas positivas"] = (
+            ((fortalezas["Cumplimientos"] + fortalezas["N_A"]) / fortalezas["Evaluaciones"] * 100)
+            .round(0).astype(int).astype(str) + "%"
+        )
+        mostrar_tabla(fortalezas, colorear=True)
+
+    st.markdown("#### Evolución mensual del asesor")
+    mensual = individual[individual["Mes"] != "Sin mes"].groupby("Mes", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Mes")
+    if not mensual.empty:
+        mensual["Calidad"] = mensual["Calidad_num"].apply(fmt_pct)
+        fig = px.line(
+            mensual, x="Mes", y="Calidad_num", markers=True,
+            labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"},
+            color_discrete_sequence=[VERDE_PRINCIPAL]
+        )
+        st.plotly_chart(
+            estilo_grafico(fig, "Evolución mensual", "Mes", "Calidad", es_porcentaje_y=True),
+            use_container_width=True
+        )
+        mostrar_tabla(mensual[["Mes", "Auditorías", "Calidad"]])
+
+    st.markdown("#### Historial de auditorías")
+    cols_hist = [
+        "Fecha", "Campaña", "ID", "Tipo de gestión", "Tipificación",
+        "Puntaje final", "Puntos a trabajar", "Observaciones"
+    ]
+    historial = individual[cols_hist].copy()
+    historial["Fecha_str"] = historial["Fecha"].dt.strftime("%d/%m/%Y").fillna("Sin fecha")
+    historial["Calidad"] = historial["Puntaje final"].apply(fmt_pct)
+    historial = historial.sort_values("Fecha", ascending=False, na_position="last")
+    mostrar_tabla(historial[["Fecha_str", "Campaña", "ID", "Tipo de gestión", "Tipificación", "Calidad", "Puntos a trabajar", "Observaciones"]])
+
+# =====================================================
+# 3. POR CAMPAÑA
+# =====================================================
+with tab3:
+    st.subheader("Desempeño por campaña")
+    resumen_camp = filtrado.groupby("Campaña", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Asesores=("Asesor", "nunique"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Calidad_num", ascending=False)
+    resumen_camp["Calidad"] = resumen_camp["Calidad_num"].apply(fmt_pct)
+
+    fig = px.bar(
+        resumen_camp, x="Campaña", y="Calidad_num", text="Calidad",
+        labels={"Calidad_num": "Calidad (%)", "Campaña": "Campaña"},
+        color_discrete_sequence=[VERDE_PRINCIPAL]
+    )
+    fig.update_traces(textposition="outside")
+    st.plotly_chart(
+        estilo_grafico(fig, "Calidad promedio por campaña", "Campaña", "Calidad", es_porcentaje_y=True),
+        use_container_width=True
+    )
+    mostrar_tabla(resumen_camp[["Campaña", "Auditorías", "Asesores", "Calidad"]])
+
+    st.subheader("Evolución mensual por campaña")
+    base_camp = filtrado[filtrado["Mes"] != "Sin mes"].copy()
+    if not base_camp.empty:
+        mensual_camp = base_camp.groupby(["Mes", "Campaña"], as_index=False).agg(
+            Auditorías=("Puntaje final", "count"),
+            Calidad_num=("Puntaje final", "mean")
+        ).sort_values(["Mes", "Campaña"])
+        mensual_camp["Calidad"] = mensual_camp["Calidad_num"].apply(fmt_pct)
+
+        fig = px.line(
+            mensual_camp, x="Mes", y="Calidad_num", color="Campaña",
+            markers=True, labels={"Calidad_num": "Calidad (%)"}
+        )
+        st.plotly_chart(
+            estilo_grafico(fig, "Evolución mensual por campaña", "Mes", "Calidad", es_porcentaje_y=True),
+            use_container_width=True
+        )
+        mostrar_tabla(mensual_camp[["Mes", "Campaña", "Auditorías", "Calidad"]])
+
+# =====================================================
+# 4. HISTÓRICO GENERAL DE EMPRESA
+# =====================================================
+with tab4:
+    st.subheader("Histórico general de Calidad | Empresa")
+
+    if not df_con_fecha.empty:
+        años = sorted(df_con_fecha["Año"].dropna().astype(int).unique())
+        año_actual_datos = int(df_con_fecha["Año"].max())
+        año_sel_empresa = st.selectbox(
+            "Año a consultar", años,
+            index=años.index(año_actual_datos),
+            key="año_historico_empresa"
+        )
+        empresa_anual = df_con_fecha[df_con_fecha["Año"] == año_sel_empresa].copy()
+    else:
+        año_sel_empresa = "Todos"
+        empresa_anual = df.copy()
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric(f"Puntuación total empresa {año_sel_empresa}", fmt_pct(promedio_anual(empresa_anual)))
+    m2.metric("Auditorías", len(empresa_anual))
+    m3.metric("Campañas", empresa_anual["Campaña"].nunique())
+
+    st.markdown("#### Evolución mensual de la empresa")
+    empresa_mensual = empresa_anual[empresa_anual["Mes"] != "Sin mes"].groupby("Mes", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Mes")
+
+    if not empresa_mensual.empty:
+        empresa_mensual["Calidad"] = empresa_mensual["Calidad_num"].apply(fmt_pct)
+        fig = px.line(
+            empresa_mensual, x="Mes", y="Calidad_num", markers=True,
+            labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"},
+            color_discrete_sequence=[VERDE_PRINCIPAL]
+        )
+        st.plotly_chart(
+            estilo_grafico(fig, "Promedio mensual de calidad | Empresa", "Mes", "Calidad", es_porcentaje_y=True),
+            use_container_width=True
+        )
+        mostrar_tabla(empresa_mensual[["Mes", "Auditorías", "Calidad"]])
+
+    st.markdown("#### Promedio por campaña")
+    empresa_por_camp = empresa_anual.groupby("Campaña", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Asesores=("Asesor", "nunique"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Calidad_num", ascending=False)
+    empresa_por_camp["Calidad"] = empresa_por_camp["Calidad_num"].apply(fmt_pct)
+    mostrar_tabla(empresa_por_camp[["Campaña", "Auditorías", "Asesores", "Calidad"]])
+
+# =====================================================
+# 5. HISTÓRICO POR ASESOR Y CAMPAÑA
+# =====================================================
+with tab5:
+    st.subheader("Histórico mensual por asesor y campaña")
+    asesores_historico = sorted(df["Asesor"].dropna().unique())
+    asesor_historico = st.selectbox(
+        "Seleccionar asesor", asesores_historico,
+        key="asesor_historico"
+    )
+
+    base_asesor_all = df[df["Asesor"] == asesor_historico].copy()
+    años_asesor = sorted(base_asesor_all["Año"].dropna().astype(int).unique())
+
+    if años_asesor:
+        año_sel_asesor = st.selectbox(
+            "Año",
+            options=años_asesor,
+            index=max(0, len(años_asesor) - 1),
+            key="año_historico_asesor"
+        )
+        base_asesor_hist = base_asesor_all[base_asesor_all["Año"] == año_sel_asesor].copy()
+    else:
+        base_asesor_hist = base_asesor_all
+
+    b1, b2, b3 = st.columns(3)
+    b1.metric("Auditorías", len(base_asesor_hist))
+    b2.metric("Promedio del asesor", fmt_pct(base_asesor_hist["Puntaje final"].mean()))
+    b3.metric("Campañas", base_asesor_hist["Campaña"].nunique())
+
+    st.markdown("#### Evolución mensual: una línea por campaña")
+    asesor_mes_camp = base_asesor_hist[base_asesor_hist["Mes"] != "Sin mes"].groupby(
+        ["Mes", "Campaña"], as_index=False
+    ).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values(["Mes", "Campaña"])
+
+    if not asesor_mes_camp.empty:
+        asesor_mes_camp["Calidad"] = asesor_mes_camp["Calidad_num"].apply(fmt_pct)
+        fig = px.line(
+            asesor_mes_camp, x="Mes", y="Calidad_num", color="Campaña",
+            markers=True, labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
+        )
+        st.plotly_chart(
+            estilo_grafico(
+                fig, f"Evolución mensual por campaña | {asesor_historico}",
+                "Mes", "Calidad", es_porcentaje_y=True
+            ),
+            use_container_width=True
+        )
+        mostrar_tabla(asesor_mes_camp[["Mes", "Campaña", "Auditorías", "Calidad"]])
+
+    st.markdown("#### Promedio por campaña del asesor")
+    asesor_por_camp = base_asesor_hist.groupby("Campaña", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad_num=("Puntaje final", "mean")
+    ).sort_values("Calidad_num", ascending=False)
+    asesor_por_camp["Calidad"] = asesor_por_camp["Calidad_num"].apply(fmt_pct)
+    mostrar_tabla(asesor_por_camp[["Campaña", "Auditorías", "Calidad"]])
+
+# =====================================================
+# 6. CRITERIOS Y DETALLE DE AUDITORÍAS
+# =====================================================
+with tab6:
+    st.subheader("Análisis general de criterios")
+    if not detalle_filtrado.empty:
+        resumen_criterios = detalle_filtrado.groupby(["Criterio", "Dimensión"], as_index=False).agg(
+            Evaluaciones=("Respuesta", "count"),
+            SI=("Respuesta", lambda x: x.isin(["si", "sí"]).sum()),
+            NO=("Respuesta", lambda x: (x == "no").sum()),
+            Mejoras=("Respuesta", lambda x: (x == "punto de mejora").sum()),
+            NA=("Respuesta", lambda x: (x == "n/a").sum()),
+            Descuento=("Descuento", "sum")
+        )
+
+        resumen_criterios["% cumplimiento"] = (
+            ((resumen_criterios["SI"] + resumen_criterios["NA"]) / resumen_criterios["Evaluaciones"] * 100)
+            .round(0).astype(int).astype(str) + "%"
+        )
+        resumen_criterios["% incumplimiento"] = (
+            (resumen_criterios["NO"] / resumen_criterios["Evaluaciones"] * 100)
+            .round(0).astype(int).astype(str) + "%"
+        )
+        resumen_criterios["Descuento"] = resumen_criterios["Descuento"].round(0).astype(int)
+
+        mayores = resumen_criterios.sort_values("Descuento", ascending=False)
+        fig = px.bar(
+            mayores, x="Descuento", y="Criterio", color="Dimensión", orientation="h",
+            labels={"Descuento": "Puntos descontados", "Criterio": "Criterio"},
+            color_discrete_map={"Comercial": ROJO_CRITICO, "Actitudinal": NARANJA_TRABAJAR}
+        )
+        st.plotly_chart(
+            estilo_grafico(fig, "Criterios con mayor descuento", "Puntos", "Criterio"),
+            use_container_width=True
+        )
+        mostrar_tabla(resumen_criterios, colorear=True)
+
+    st.divider()
+    st.subheader("Detalle de auditorías")
+    columnas_detalle = [
+        "Fecha", "Asesor", "Campaña", "ID", "Tipo de gestión",
+        "Tipificación", "Puntaje final", "Puntos a trabajar",
+        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
+    ]
+    detalle = filtrado[columnas_detalle].copy()
+    detalle["Fecha_str"] = detalle["Fecha"].dt.strftime("%d/%m/%Y").fillna("Sin fecha")
+    detalle["Calidad"] = detalle["Puntaje final"].apply(fmt_pct)
+    detalle = detalle.sort_values("Fecha", ascending=False, na_position="last")
+    mostrar_tabla(detalle[[
+        "Fecha_str", "Asesor", "Campaña", "ID", "Tipo de gestión",
+        "Tipificación", "Calidad", "Puntos a trabajar",
+        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
+    ]])
+
+    csv = filtrado[columnas_detalle].to_csv(
+        index=False, sep=";", encoding="utf-8-sig"
+    )
+    st.download_button(
+        "Descargar auditorías en CSV",
+        data=csv,
+        file_name="auditorias_calidad_contactel.csv",
+        mime="text/csv"
+    )
+
+# =====================================================
+# 7. ANÁLISIS RÁPIDO Y RECOMENDACIONES
+# =====================================================
+with tab7:
+    st.subheader("Diagnóstico rápido y recomendaciones accionables")
+    st.caption("Calculado automáticamente sobre los registros filtrados actualmente.")
+
+    res_global_dim = resumen_por_dimension(detalle_filtrado)
+    ranking_asesores = filtrado.groupby("Asesor", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad=("Puntaje final", "mean")
+    ).sort_values("Calidad", ascending=True)
+
+    ranking_campanas = filtrado.groupby("Campaña", as_index=False).agg(
+        Auditorías=("Puntaje final", "count"),
+        Calidad=("Puntaje final", "mean")
+    ).sort_values("Calidad", ascending=True)
+
+    if not ranking_asesores.empty:
+        peor_asesor = ranking_asesores.iloc[0]
+        mejor_asesor = ranking_asesores.iloc[-1]
+        st.markdown(
+            f'<div class="estado-critico">'
+            f'<span class="badge-critico">Mayor oportunidad en asesor:</span> '
+            f'<b>{peor_asesor["Asesor"]}</b> ({fmt_pct(peor_asesor["Calidad"])} en {int(peor_asesor["Auditorías"])} auditorías).'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<div class="estado-positivo">'
+            f'<span class="badge-positivo">Referente positivo del período:</span> '
+            f'<b>{mejor_asesor["Asesor"]}</b> ({fmt_pct(mejor_asesor["Calidad"])}).'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    if not ranking_campanas.empty:
+        peor_camp = ranking_campanas.iloc[0]
+        st.markdown(
+            f'<div class="estado-trabajar">'
+            f'<span class="badge-trabajar">Campaña a trabajar:</span> '
+            f'<b>{peor_camp["Campaña"]}</b> registra el menor promedio del filtro ({fmt_pct(peor_camp["Calidad"])}).'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    top_com_global = res_global_dim[res_global_dim["Dimensión"] == "Comercial"]
+    if not top_com_global.empty:
+        c_crit = top_com_global.iloc[0]
+        rec_c = RECOMENDACIONES_CRITERIO.get(c_crit["Criterio"], "Reforzar práctica guiada en coaching.")
+        st.markdown(
+            f'<div class="estado-critico">'
+            f'<span class="badge-critico">Aspecto comercial crítico:</span> '
+            f'<b>{c_crit["Criterio"]}</b> ({c_crit["Descuento"]} pts descontados / {c_crit["% crítico"]} crítico). '
+            f'<br><span class="badge-trabajar">A trabajar / Recomendación:</span> {rec_c}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    top_act_global = res_global_dim[res_global_dim["Dimensión"] == "Actitudinal"]
+    if not top_act_global.empty:
+        a_crit = top_act_global.iloc[0]
+        rec_a = RECOMENDACIONES_CRITERIO.get(a_crit["Criterio"], "Trabajar tono y cercanía en llamada.")
+        st.markdown(
+            f'<div class="estado-trabajar">'
+            f'<span class="badge-trabajar">Aspecto actitudinal a trabajar:</span> '
+            f'<b>{a_crit["Criterio"]}</b> ({a_crit["Descuento"]} pts descontados / {a_crit["% crítico"]} crítico). '
+            f'<br><span class="badge-positivo">Acción sugerida:</span> {rec_a}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown("#### Plan de acción sugerido por criterio crítico")
+    if not res_global_dim.empty:
+        plan = res_global_dim.head(6).copy()
+        plan["Acción recomendada"] = plan["Criterio"].map(
+            lambda c: RECOMENDACIONES_CRITERIO.get(c, "Realizar coaching 1 a 1.")
+        )
+        mostrar_tabla(plan[[
+            "Dimensión", "Criterio", "Descuento", "% crítico", "Acción recomendada"
+        ]], colorear=True)
+
+# =====================================================
+# PIE Y ACTUALIZACIÓN
+# =====================================================
+st.divider()
+st.caption(
+    "Calidad y Capacitación | Contactel | "
+    "Actualización automática de datos cada 5 minutos."
+)
+st.caption("La columna AC (Acción) está excluida del análisis y de las vistas.")
+
+if st.button("Actualizar datos ahora"):
+    st.cache_data.clear()
+    st.rerun()
