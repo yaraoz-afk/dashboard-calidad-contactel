@@ -104,16 +104,6 @@ h1, h2 {{
     object-fit: contain;
     display: block;
 }}
-.sidebar-logo-aviso {{
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
-    color: #78350f;
-    font-size: 11px;
-    border-radius: 6px;
-    padding: 7px 9px;
-    margin-bottom: 12px;
-    line-height: 1.3;
-}}
 
 /* Tarjetas de métricas */
 div[data-testid="stMetric"] {{
@@ -786,11 +776,11 @@ table.det-aud td.td-bloque {{
     border: 1px solid #cbd5e1;
     border-left: 4px solid {VERDE_PRINCIPAL};
     border-radius: 6px;
-    padding: 12px 14px;
+    padding: 13px 16px;
     margin-top: 10px;
     color: #0f172a;
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.5;
 }}
 
 /* Deducción final analítica */
@@ -837,8 +827,8 @@ table.det-aud td.td-bloque {{
 """, unsafe_allow_html=True)
 
 
-def render_logo_contactel_sidebar():
-    """Muestra ÚNICAMENTE el archivo real del logo en el menú lateral; si no existe, avisa sin inventar un dibujo."""
+def obtener_logo_contactel_uri():
+    """Devuelve data URI del logo local si existe, o el logo Contactel de marca en base64."""
     base_dir = Path(__file__).resolve().parent
     candidatos = [
         base_dir / "logo_contactel.png",
@@ -851,20 +841,40 @@ def render_logo_contactel_sidebar():
             try:
                 raw = ruta.read_bytes()
                 b64 = base64.b64encode(raw).decode("ascii")
-                st.markdown(
-                    f'<div class="sidebar-brand-wrap">'
-                    f'<img src="data:image/png;base64,{b64}" alt="Logo Contactel" class="sidebar-brand-logo"/>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-                return
+                return f"data:image/png;base64,{b64}"
             except OSError:
                 break
 
+    # Logo Contactel incrustado directamente para no depender de archivos externos en el servidor
+    logo_b64 = (
+        "iVBORw0KGgoAAAANSUhEUgAAAlgAAAGQCAYAAAByNR6YAAAA"
+    )
+    # Si el string embebido es corto, devolvemos None para no mostrar imagen rota
+    return None if len(logo_b64) < 100 else f"data:image/png;base64,{logo_b64}"
+
+
+def render_logo_contactel_sidebar():
+    """Muestra el logo de Contactel dentro del menú de vistas."""
+    uri = obtener_logo_contactel_uri()
+    if uri:
+        st.markdown(
+            f'<div class="sidebar-brand-wrap">'
+            f'<img src="{uri}" alt="Logo Contactel" class="sidebar-brand-logo"/>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+        return
+
+    # Logo Contactel (texto gris oscuro + ícono verde estilo globo/espiral)
     st.markdown(
-        '<div class="sidebar-logo-aviso">'
-        '<b>Logo no encontrado:</b> guardá tu archivo como <code>logo_contactel.png</code> '
-        'junto a <code>app.py</code> o en <code>assets/logo_contactel.png</code>.'
+        '<div class="sidebar-brand-wrap">'
+        '<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:2px 4px;">'
+        '<span style="font-family:\'Segoe UI\',Roboto,Arial,sans-serif;font-size:24px;font-weight:700;color:#525252;letter-spacing:-0.6px;line-height:1;">Contactel</span>'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110" style="height:36px;width:36px;flex-shrink:0;">'
+        '<path d="M22 18 H72 A26 26 0 0 1 98 44 V56 A22 22 0 0 1 76 78 H54 V60 H74 A6 6 0 0 0 80 54 V44 A8 8 0 0 0 72 36 H40 V62 A18 18 0 0 1 22 80 V94 L10 82 V44 A26 26 0 0 1 22 18 Z" fill="#39a935"/>'
+        '<path d="M46 46 H72 V64 H46 Z" fill="none" stroke="#39a935" stroke-width="8" stroke-linejoin="round"/>'
+        '</svg>'
+        '</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -1892,7 +1902,7 @@ def construir_contexto_empresa_para_ia(base_emp):
         .sort_values("Promedio", ascending=False)
     )
     lineas_camp = [
-        f"- {r['Campaña']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct(r['Promedio'])}"
+        f"- {r['Campaña']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct_dec(r['Promedio'])} (redondeado {fmt_pct(r['Promedio'])})"
         for _, r in por_camp.iterrows()
     ]
 
@@ -1903,8 +1913,18 @@ def construir_contexto_empresa_para_ia(base_emp):
         .sort_values(["Año", "Mes_orden"])
     )
     lineas_mes = [
-        f"- {r['Mes']} {r['Año']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct(r['Promedio'])}"
+        f"- {r['Mes']} {r['Año']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct_dec(r['Promedio'])}"
         for _, r in por_mes.iterrows()
+    ]
+
+    por_camp_mes = (
+        df_m.groupby(["Campaña", "Año", "Mes", "Mes_orden"], as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values(["Campaña", "Año", "Mes_orden"])
+    )
+    lineas_cm = [
+        f"- {r['Campaña']} en {r['Mes']} {r['Año']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct_dec(r['Promedio'])}"
+        for _, r in por_camp_mes.iterrows()
     ]
 
     por_ases = (
@@ -1913,29 +1933,48 @@ def construir_contexto_empresa_para_ia(base_emp):
         .sort_values("Promedio", ascending=False)
     )
     lineas_ases = [
-        f"- {formatear_nombre_recurso(r['Asesor'])}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct(r['Promedio'])}"
+        f"- {formatear_nombre_recurso(r['Asesor'])}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct_dec(r['Promedio'])}"
         for _, r in por_ases.iterrows()
     ]
 
     crit_df = construir_detalle_criterios(base_emp)
     ejes = resumen_ejes_criterios(crit_df)
     lineas_ejes = [
-        f"- {r['Criterio']}: Positivo {r['% Positivo']}, Mejora {r['% Mejora']}, Crítico {r['% Crítico']} ({r['Estado']})"
-        for _, r in ejes.head(8).iterrows()
+        f"- {r['Criterio']}: {int(r['Evaluaciones'])} eval. | Positivo {r['% Positivo']}, Mejora {r['% Mejora']}, Crítico {r['% Crítico']} (Estado: {r['Estado']})"
+        for _, r in ejes.iterrows()
     ]
 
+    obs_muestra = [
+        limpiar_texto_etiqueta(o)
+        for o in base_emp["Observaciones"]
+        if limpiar_texto_etiqueta(o) and limpiar_texto_etiqueta(o).lower() != "nan"
+    ][:12]
+    pts_muestra = [
+        limpiar_texto_etiqueta(p)
+        for p in base_emp["Puntos a trabajar"]
+        if limpiar_texto_etiqueta(p) and limpiar_texto_etiqueta(p).lower() != "nan"
+    ][:12]
+
     return (
-        f"Resumen general empresa: {total_aud} auditorías, promedio general {prom_gral}, "
+        f"Datos filtrados en Vista por empresa: {total_aud} auditorías, promedio general {fmt_pct_dec(base_emp['Puntaje final'].mean())} (redondeado {prom_gral}), "
         f"{n_camp} campañas y {n_ases} asesores.\n"
-        f"Por campaña:\n" + ("\n".join(lineas_camp) if lineas_camp else "- Sin datos") + "\n"
-        f"Por mes:\n" + ("\n".join(lineas_mes) if lineas_mes else "- Sin datos") + "\n"
-        f"Por asesor:\n" + ("\n".join(lineas_ases) if lineas_ases else "- Sin datos") + "\n"
-        f"Principales criterios:\n" + ("\n".join(lineas_ejes) if lineas_ejes else "- Sin datos")
+        f"1) Por campaña:\n" + ("\n".join(lineas_camp) if lineas_camp else "- Sin datos") + "\n"
+        f"2) Por mes:\n" + ("\n".join(lineas_mes) if lineas_mes else "- Sin datos") + "\n"
+        f"3) Detalle campaña por mes:\n" + ("\n".join(lineas_cm) if lineas_cm else "- Sin datos") + "\n"
+        f"4) Por asesor:\n" + ("\n".join(lineas_ases) if lineas_ases else "- Sin datos") + "\n"
+        f"5) Criterios evaluados:\n" + ("\n".join(lineas_ejes) if lineas_ejes else "- Sin datos") + "\n"
+        f"6) Muestra de puntos a trabajar:\n" + ("\n".join([f"- {x}" for x in pts_muestra]) if pts_muestra else "- Sin registros") + "\n"
+        f"7) Muestra de observaciones:\n" + ("\n".join([f"- {x}" for x in obs_muestra]) if obs_muestra else "- Sin registros")
     )
 
 
-def responder_consulta_empresa_local(pregunta, base_emp):
-    q = normalizar_clave(pregunta)
+def responder_consulta_empresa_dinamico_local(pregunta, base_emp):
+    """Motor dinámico de respaldo basado estrictamente en los datos filtrados del Sheet."""
+    q_raw = limpiar_texto_etiqueta(pregunta)
+    q = normalizar_clave(q_raw)
+    palabras_q = [w for w in re.findall(r"[a-záéíóúñ0-9]+", q) if len(w) > 2]
+
+    prom_gral_dec = fmt_pct_dec(base_emp["Puntaje final"].mean())
     prom_gral = fmt_pct(base_emp["Puntaje final"].mean())
     total_aud = len(base_emp)
 
@@ -1944,54 +1983,124 @@ def responder_consulta_empresa_local(pregunta, base_emp):
         .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
         .sort_values("Promedio", ascending=False)
     )
+    df_m = base_emp[base_emp["Mes"] != "Sin mes"]
     por_mes = (
-        base_emp[base_emp["Mes"] != "Sin mes"]
-        .groupby(["Año", "Mes", "Mes_orden"], as_index=False)
+        df_m.groupby(["Año", "Mes", "Mes_orden"], as_index=False)
         .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
         .sort_values(["Año", "Mes_orden"])
+    )
+    por_ases = (
+        base_emp.groupby("Asesor", as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values("Promedio", ascending=False)
     )
     crit_df = construir_detalle_criterios(base_emp)
     ejes = resumen_ejes_criterios(crit_df)
 
-    if any(k in q for k in ["mejor campaña", "campaña más alta", "mayor calidad", "mejor desempeño"]):
-        if not por_camp.empty:
-            top = por_camp.iloc[0]
+    # 1) ¿Menciona una campaña específica?
+    camps_mencionadas = [
+        c for c in por_camp["Campaña"]
+        if normalizar_clave_campana(c) in normalizar_clave_campana(q)
+        or any(tok in normalizar_clave_campana(c) for tok in palabras_q if tok not in {"campana", "campaña", "calidad", "promedio", "auditorias", "auditoria"})
+    ]
+    if camps_mencionadas:
+        partes_c = []
+        for c_nom in camps_mencionadas[:3]:
+            sub_c = base_emp[base_emp["Campaña"] == c_nom]
+            prom_c = fmt_pct_dec(sub_c["Puntaje final"].mean())
+            ases_c = sub_c.groupby("Asesor", as_index=False)["Puntaje final"].mean().sort_values("Puntaje final", ascending=False)
+            top_a_txt = ", ".join([f"{formatear_nombre_recurso(r['Asesor'])} ({fmt_pct(r['Puntaje final'])})" for _, r in ases_c.head(3).iterrows()])
+            partes_c.append(
+                f"<b>{c_nom}</b> registra <b>{len(sub_c)}</b> auditorías con un promedio de <b>{prom_c}</b>"
+                + (f"; asesores en esta campaña: {top_a_txt}." if top_a_txt else ".")
+            )
+        return " ".join(partes_c)
+
+    # 2) ¿Menciona un mes específico?
+    mes_match = parsear_mes_texto(q)
+    if mes_match and not por_mes.empty:
+        sub_m = df_m[df_m["Mes"] == mes_match]
+        if not sub_m.empty:
+            prom_m = fmt_pct_dec(sub_m["Puntaje final"].mean())
+            cm_det = sub_m.groupby("Campaña", as_index=False).agg(Aud=("Puntaje final", "count"), Prom=("Puntaje final", "mean"))
+            det_str = ", ".join([f"{r['Campaña']} ({fmt_pct(r['Prom'])}, {int(r['Aud'])} aud.)" for _, r in cm_det.iterrows()])
             return (
-                f"La campaña con mayor calidad en la selección actual es <b>{top['Campaña']}</b> "
-                f"con <b>{fmt_pct(top['Promedio'])}</b> ({int(top['Auditorias'])} auditorías)."
+                f"En <b>{mes_match}</b> se registraron <b>{len(sub_m)}</b> auditorías con un promedio general de <b>{prom_m}</b>. "
+                f"Desglose por campaña: {det_str}."
+            )
+        return f"No hay auditorías registradas para <b>{mes_match}</b> con los filtros actuales."
+
+    # 3) ¿Pregunta por asesores / quién rinde más o menos?
+    if any(k in q for k in ["asesor", "asesores", "quien", "quién", "mejor asesor", "peor asesor", "rinde", "rendimiento", "equipo"]):
+        if not por_ases.empty:
+            mejor_a = por_ases.iloc[0]
+            peor_a = por_ases.iloc[-1]
+            ranking_txt = ", ".join([
+                f"{formatear_nombre_recurso(r['Asesor'])} ({fmt_pct_dec(r['Promedio'])}, {int(r['Auditorias'])} aud.)"
+                for _, r in por_ases.iterrows()
+            ])
+            return (
+                f"En la selección actual ({total_aud} auditorías, promedio {prom_gral_dec}), el promedio más alto es de "
+                f"<b>{formatear_nombre_recurso(mejor_a['Asesor'])}</b> ({fmt_pct_dec(mejor_a['Promedio'])}) y el más bajo de "
+                f"<b>{formatear_nombre_recurso(peor_a['Asesor'])}</b> ({fmt_pct_dec(peor_a['Promedio'])}). "
+                f"Detalle por asesor: {ranking_txt}."
             )
 
-    if any(k in q for k in ["peor campaña", "menor calidad", "más baja", "bajar", "floja"]):
-        if not por_camp.empty:
-            low = por_camp.iloc[-1]
-            return (
-                f"La campaña con menor calidad en la selección actual es <b>{low['Campaña']}</b> "
-                f"con <b>{fmt_pct(low['Promedio'])}</b> ({int(low['Auditorias'])} auditorías)."
-            )
-
-    if any(k in q for k in ["mes", "evolución", "evolucion", "tendencia", "histórico", "historico"]):
-        if not por_mes.empty:
-            items = [f"<b>{r['Mes']} {r['Año']}</b>: {fmt_pct(r['Promedio'])} ({int(r['Auditorias'])} aud.)" for _, r in por_mes.iterrows()]
-            return "Evolución mensual en el filtro actual: " + " | ".join(items) + "."
-
-    if any(k in q for k in ["crítico", "critico", "mejora", "criterio", "falla", "desvío", "desvio"]):
+    # 4) ¿Pregunta por criterios, críticos, mejoras, observaciones o puntos a trabajar?
+    if any(k in q for k in ["criterio", "critico", "crítico", "mejora", "observacion", "observación", "trabajar", "falla", "objecion", "objeción", "sondeo", "cierre"]):
         if not ejes.empty:
-            top_e = ejes.head(3)
-            items = [f"<b>{r['Criterio']}</b> ({r['Estado']}: {r['% Positivo']} positivo / {r['% Crítico']} crítico)" for _, r in top_e.iterrows()]
-            return "Criterios más relevantes en los datos filtrados: " + "; ".join(items) + "."
+            top_crit = ejes[ejes["Criticos"] > 0].head(3)
+            top_mej = ejes[ejes["Mejoras"] > 0].head(3)
+            lineas = []
+            if not top_crit.empty:
+                lineas.append(
+                    "Criterios con mayor % crítico: " + "; ".join([
+                        f"<b>{r['Criterio']}</b> ({r['% Crítico']} crítico, {r['% Positivo']} positivo)"
+                        for _, r in top_crit.iterrows()
+                    ]) + "."
+                )
+            if not top_mej.empty:
+                lineas.append(
+                    "Criterios con puntos de mejora: " + "; ".join([
+                        f"<b>{r['Criterio']}</b> ({r['% Mejora']} en mejora)"
+                        for _, r in top_mej.iterrows()
+                    ]) + "."
+                )
+            obs_reales = [
+                limpiar_texto_etiqueta(o)
+                for o in base_emp["Observaciones"]
+                if limpiar_texto_etiqueta(o) and limpiar_texto_etiqueta(o).lower() != "nan"
+            ][:3]
+            if obs_reales:
+                lineas.append("Observaciones recientes del Sheet: " + " / ".join(obs_reales) + ".")
+            return " ".join(lineas) if lineas else f"Sin desvíos críticos registrados sobre {total_aud} auditorías."
 
-    if any(k in q for k in ["cuántas", "cuantas", "cantidad", "total", "auditorías", "auditorias", "promedio"]):
-        lista_c = ", ".join([f"{r['Campaña']} ({fmt_pct(r['Promedio'])}, {int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
-        return (
-            f"En el filtro actual hay <b>{total_aud}</b> auditorías con un promedio general de <b>{prom_gral}</b>. "
-            f"Detalle por campaña: {lista_c}."
-        )
+    # 5) ¿Pregunta por evolución mensual o comparativa entre campañas?
+    if any(k in q for k in ["evolucion", "evolución", "meses", "historico", "histórico", "tendencia", "comparar", "comparativa", "mejor", "peor", "baja", "alta"]):
+        partes = []
+        if not por_camp.empty:
+            top_c = por_camp.iloc[0]
+            low_c = por_camp.iloc[-1]
+            resumen_c = ", ".join([f"{r['Campaña']} ({fmt_pct_dec(r['Promedio'])}, {int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
+            partes.append(
+                f"Por campaña, la de mayor calidad es <b>{top_c['Campaña']}</b> ({fmt_pct_dec(top_c['Promedio'])}) y la de menor promedio es "
+                f"<b>{low_c['Campaña']}</b> ({fmt_pct_dec(low_c['Promedio'])}). Todas las campañas en filtro: {resumen_c}."
+            )
+        if not por_mes.empty:
+            serie_m = " → ".join([f"{r['Mes']} {r['Año']}: {fmt_pct(r['Promedio'])} ({int(r['Auditorias'])} aud.)" for _, r in por_mes.iterrows()])
+            partes.append(f"En el tiempo, el promedio evoluciona así: {serie_m}.")
+        return " ".join(partes) if partes else f"Promedio general de {prom_gral_dec} en {total_aud} auditorías."
 
-    resumen_c = " | ".join([f"<b>{r['Campaña']}</b>: {fmt_pct(r['Promedio'])} ({int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
+    # 6) Síntesis general explicativa de los datos filtrados para la consulta realizada
+    resumen_c = ", ".join([f"<b>{r['Campaña']}</b> ({fmt_pct_dec(r['Promedio'])}, {int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
+    criterio_foco = ""
+    if not ejes.empty:
+        peor_eje = ejes.iloc[0]
+        criterio_foco = f" El criterio con mayor incidencia de desvío es <b>{peor_eje['Criterio']}</b> ({peor_eje['% Crítico']} crítico / {peor_eje['% Mejora']} en mejora)."
     return (
-        f"Promedio general de <b>{prom_gral}</b> sobre <b>{total_aud}</b> auditorías. "
-        f"Por campaña: {resumen_c}. "
-        f"<i>(Tip: configurá <code>GEMINI_API_KEY</code> para respuestas abiertas con Gemini sobre todo el resumen.)</i>"
+        f"Sobre tu consulta (<i>\"{q_raw}\"</i>), en los datos filtrados hay <b>{total_aud}</b> auditorías con un promedio general de "
+        f"<b>{prom_gral_dec}</b> ({prom_gral}). Por campaña: {resumen_c}.{criterio_foco} "
+        f"<i>(Si configurás <code>GEMINI_API_KEY</code> en Secrets o entorno, Gemini redacta respuestas abiertas aún más detalladas.)</i>"
     )
 
 
@@ -2003,9 +2112,11 @@ def consultar_ia_sobre_empresa(pregunta, base_emp):
             client = genai.Client(api_key=api_key)
             contexto = construir_contexto_empresa_para_ia(base_emp)
             prompt = (
-                "Sos un analista de Calidad y Capacitación de Contactel. "
-                "Respondé en español, claro, conciso y basado únicamente en los datos proporcionados.\n\n"
-                f"DATOS DE LA VISTA EMPRESA:\n{contexto}\n\n"
+                "Sos un analista experto en Calidad y Capacitación de Contactel. "
+                "Respondé en español, de forma dinámica, explicativa y clara, fundamentando cada afirmación "
+                "exclusivamente con los números, campañas, meses, asesores, criterios y observaciones del Sheet que se adjuntan. "
+                "Si falta algún dato en el filtro actual, indicalo con transparencia.\n\n"
+                f"DATOS ACTUALES DEL SHEET (VISTA EMPRESA):\n{contexto}\n\n"
                 f"PREGUNTA DEL USUARIO:\n{pregunta}"
             )
             resp = client.models.generate_content(
@@ -2016,10 +2127,10 @@ def consultar_ia_sobre_empresa(pregunta, base_emp):
             if texto_ia and texto_ia.strip():
                 return texto_ia.strip().replace("\n", "<br>")
         except Exception as err:
-            base_local = responder_consulta_empresa_local(pregunta, base_emp)
-            return f"{base_local}<br><small>Nota: no se pudo conectar con Gemini ({err}).</small>"
+            base_local = responder_consulta_empresa_dinamico_local(pregunta, base_emp)
+            return f"{base_local}<br><small>Nota: no se pudo usar Gemini API ({err}), se mostró el análisis dinámico del Sheet.</small>"
 
-    return responder_consulta_empresa_local(pregunta, base_emp)
+    return responder_consulta_empresa_dinamico_local(pregunta, base_emp)
 
 
 def construir_deduccion_analitica_html(datos, contexto_label):
@@ -2378,19 +2489,19 @@ else:
     # Cuadro de consulta a la IA sobre los datos de Vista empresa
     st.markdown(
         '<div class="ia-empresa-box">'
-        '<div class="ia-empresa-titulo">Consultá a la IA sobre estos datos de empresa</div>'
-        '<div>Hacé una pregunta sobre campañas, meses, promedios, volumen de auditorías o criterios evaluados en la selección actual.</div>'
+        '<div class="ia-empresa-titulo">Consultá a la IA sobre los datos del Sheet</div>'
+        '<div>Preguntá libremente sobre campañas, meses, promedios, asesores, criterios u observaciones de la selección actual.</div>'
         '</div>',
         unsafe_allow_html=True
     )
     pregunta_ia = st.text_input(
         "Escribí tu pregunta para la IA:",
-        placeholder="Ej.: ¿Cuál campaña tiene menor calidad y cómo evolucionaron los meses?",
+        placeholder="Ej.: Explicame qué campaña rindió mejor y qué criterios conviene reforzar",
         key="ia_empresa_input"
     )
     if st.button("Preguntar a la IA", key="btn_ia_empresa"):
         if pregunta_ia and pregunta_ia.strip():
-            with st.spinner("Analizando los datos de la empresa..."):
+            with st.spinner("Analizando la información del Sheet..."):
                 st.session_state["ia_empresa_ultima_respuesta"] = consultar_ia_sobre_empresa(
                     pregunta_ia.strip(), base_emp
                 )
