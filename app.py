@@ -83,13 +83,19 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     font-weight: 700;
 }}
 
-/* Caja del select/multiselect cerrada */
+/* Caja del select/multiselect cerrada: sin cortes, con wrap completo */
 div[data-testid="stMultiSelect"] > div > div,
 div[data-baseweb="select"] > div {{
     background-color: {GRIS_DESPLEGABLE} !important;
     color: #000000 !important;
     border: 1px solid #94a3b8 !important;
     border-radius: 6px !important;
+    min-height: 42px !important;
+    height: auto !important;
+    overflow: visible !important;
+    flex-wrap: wrap !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
 }}
 div[data-testid="stMultiSelect"] input,
 div[data-testid="stMultiSelect"] span,
@@ -102,7 +108,7 @@ div[data-baseweb="select"] svg {{
     color: #0f172a !important;
 }}
 
-/* Tags seleccionados en verde #30b44e con texto blanco */
+/* Tags seleccionados en verde #30b44e con texto blanco y sin recortes */
 div[data-baseweb="select"] span[data-baseweb="tag"],
 div[data-baseweb="select"] div[data-baseweb="tag"],
 span[data-baseweb="tag"],
@@ -112,6 +118,25 @@ div[data-baseweb="tag"] {{
     color: #ffffff !important;
     border: 1px solid {VERDE_OSCURO} !important;
     border-radius: 5px !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 26px !important;
+    margin: 2px 4px 2px 0 !important;
+    padding: 2px 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}}
+div[data-baseweb="select"] span[data-baseweb="tag"] span,
+div[data-baseweb="select"] div[data-baseweb="tag"] span,
+span[data-baseweb="tag"] span,
+div[data-baseweb="tag"] span {{
+    background-color: transparent !important;
+    color: #ffffff !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
 }}
 div[data-baseweb="select"] span[data-baseweb="tag"] *,
 div[data-baseweb="select"] div[data-baseweb="tag"] *,
@@ -776,21 +801,6 @@ def aplicar_filtros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
     return out
 
 
-def inicializar_y_limpiar_filtros(defaults_dict):
-    for k, val in defaults_dict.items():
-        if k not in st.session_state:
-            st.session_state[k] = list(val)
-
-
-def cb_limpiar_uno(key_target):
-    st.session_state[key_target] = []
-
-
-def cb_limpiar_todos(defaults_dict):
-    for k, val in defaults_dict.items():
-        st.session_state[k] = list(val)
-
-
 def sintesis_dimension(ejes_df, modo, dimension):
     if ejes_df.empty:
         return "Sin registro suficiente."
@@ -1045,57 +1055,15 @@ with st.sidebar:
 if seccion == "Vista por asesor":
     st.subheader("Vista por asesor")
 
-    defaults_va = {
-        "va_anio": años_disp,
-        "va_mes": meses_disp,
-        "va_camp": camp_disp,
-        "va_ases": ases_disp
-    }
-    inicializar_y_limpiar_filtros(defaults_va)
-
-    c_top_l, c_top_r = st.columns([6, 1.3])
-    with c_top_r:
-        st.button(
-            "Limpiar filtros",
-            key="btn_limpiar_todos_va",
-            on_click=cb_limpiar_todos,
-            args=(defaults_va,),
-            use_container_width=True
-        )
-
     f1, f2, f3, f4 = st.columns(4)
-
     with f1:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            a_anios_sel = st.multiselect("Año", options=años_disp, key="va_anio")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_va_anio", help="Limpiar filtro Año", on_click=cb_limpiar_uno, args=("va_anio",), use_container_width=True)
-
+        a_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="va_anio")
     with f2:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            a_meses_sel = st.multiselect("Mes", options=meses_disp, key="va_mes")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_va_mes", help="Limpiar filtro Mes", on_click=cb_limpiar_uno, args=("va_mes",), use_container_width=True)
-
+        a_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="va_mes")
     with f3:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            a_camps_sel = st.multiselect("Campaña", options=camp_disp, key="va_camp")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_va_camp", help="Limpiar filtro Campaña", on_click=cb_limpiar_uno, args=("va_camp",), use_container_width=True)
-
+        a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="va_camp")
     with f4:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            a_ases_sel = st.multiselect("Asesor", options=ases_disp, key="va_ases")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_va_ases", help="Limpiar filtro Asesor", on_click=cb_limpiar_uno, args=("va_ases",), use_container_width=True)
+        a_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="va_ases")
 
     todos_a_anios = (set(a_anios_sel) == set(años_disp)) if años_disp else True
     todos_a_meses = (set(a_meses_sel) == set(meses_disp)) if meses_disp else True
@@ -1189,47 +1157,13 @@ if seccion == "Vista por asesor":
 elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
 
-    defaults_ve = {
-        "ve_anio": años_disp,
-        "ve_mes": meses_disp,
-        "ve_camp": camp_disp
-    }
-    inicializar_y_limpiar_filtros(defaults_ve)
-
-    c_top_l, c_top_r = st.columns([6, 1.3])
-    with c_top_r:
-        st.button(
-            "Limpiar filtros",
-            key="btn_limpiar_todos_ve",
-            on_click=cb_limpiar_todos,
-            args=(defaults_ve,),
-            use_container_width=True
-        )
-
     fe1, fe2, fe3 = st.columns(3)
     with fe1:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            e_anios_sel = st.multiselect("Año", options=años_disp, key="ve_anio")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_ve_anio", help="Limpiar filtro Año", on_click=cb_limpiar_uno, args=("ve_anio",), use_container_width=True)
-
+        e_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="ve_anio")
     with fe2:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            e_meses_sel = st.multiselect("Mes", options=meses_disp, key="ve_mes")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_ve_mes", help="Limpiar filtro Mes", on_click=cb_limpiar_uno, args=("ve_mes",), use_container_width=True)
-
+        e_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ve_mes")
     with fe3:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            e_camps_sel = st.multiselect("Campaña", options=camp_disp, key="ve_camp")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_ve_camp", help="Limpiar filtro Campaña", on_click=cb_limpiar_uno, args=("ve_camp",), use_container_width=True)
+        e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ve_camp")
 
     todos_e_anios = (set(e_anios_sel) == set(años_disp)) if años_disp else True
     todos_e_meses = (set(e_meses_sel) == set(meses_disp)) if meses_disp else True
@@ -1289,56 +1223,15 @@ elif seccion == "Vista por empresa":
 else:
     st.subheader("Detalle por auditoria")
 
-    defaults_da = {
-        "da_anio": años_disp,
-        "da_mes": meses_disp,
-        "da_camp": camp_disp,
-        "da_ases": ases_disp
-    }
-    inicializar_y_limpiar_filtros(defaults_da)
-
-    c_top_l, c_top_r = st.columns([6, 1.3])
-    with c_top_r:
-        st.button(
-            "Limpiar filtros",
-            key="btn_limpiar_todos_da",
-            on_click=cb_limpiar_todos,
-            args=(defaults_da,),
-            use_container_width=True
-        )
-
     fd1, fd2, fd3, fd4 = st.columns(4)
     with fd1:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            d_anios_sel = st.multiselect("Año", options=años_disp, key="da_anio")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_da_anio", help="Limpiar filtro Año", on_click=cb_limpiar_uno, args=("da_anio",), use_container_width=True)
-
+        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
     with fd2:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            d_meses_sel = st.multiselect("Mes", options=meses_disp, key="da_mes")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_da_mes", help="Limpiar filtro Mes", on_click=cb_limpiar_uno, args=("da_mes",), use_container_width=True)
-
+        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="da_mes")
     with fd3:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            d_camps_sel = st.multiselect("Campaña", options=camp_disp, key="da_camp")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_da_camp", help="Limpiar filtro Campaña", on_click=cb_limpiar_uno, args=("da_camp",), use_container_width=True)
-
+        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
     with fd4:
-        sub_l, sub_r = st.columns([4.5, 1.2])
-        with sub_l:
-            d_ases_sel = st.multiselect("Asesor", options=ases_disp, key="da_ases")
-        with sub_r:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-            st.button("×", key="clr_da_ases", help="Limpiar filtro Asesor", on_click=cb_limpiar_uno, args=("da_ases",), use_container_width=True)
+        d_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="da_ases")
 
     todos_d_anios = (set(d_anios_sel) == set(años_disp)) if años_disp else True
     todos_d_meses = (set(d_meses_sel) == set(meses_disp)) if meses_disp else True
