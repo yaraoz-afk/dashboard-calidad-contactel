@@ -823,48 +823,35 @@ def resumen_ejes_criterios(df_crit):
     return res.sort_values(["% Crítico_num", "% Mejora_num", "Descuento"], ascending=[False, False, False])
 
 
-def calcular_opciones_y_filtrar(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None):
+def aplicar_filtros_libres(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
+                         todas_camps_disp=None, todos_ases_disp=None):
     """
-    Calcula opciones en cascada (Año -> Mes -> Campaña -> Asesor)
-    respetando listas vacías cuando el usuario borra selecciones.
+    Filtra por Año, Mes, Campaña y Asesor de forma libre:
+    - Si un filtro tiene selecciones, filtra por esos valores.
+    - Si se borra un filtro (queda vacío []), no filtra por ese campo.
+    - Devuelve además los asesores disponibles para la combinación actual de Año + Mes + Campaña.
     """
-    df_p = base_df.copy()
+    out = base_df.copy()
     if anios_sel:
-        df_p = df_p[df_p["Año"].isin(anios_sel)]
+        out = out[out["Año"].isin(anios_sel)]
     if meses_sel:
-        df_p = df_p[df_p["Mes"].isin(meses_sel)]
+        out = out[out["Mes"].isin(meses_sel)]
 
-    camps_disp_cascada = sorted(df_p["Campaña"].dropna().unique())
-    camps_validas = [c for c in (camps_sel or []) if c in camps_disp_cascada]
+    base_ases_df = out.copy()
+    if camps_sel:
+        claves_c = {normalizar_clave(c) for c in camps_sel}
+        base_ases_df = base_ases_df[base_ases_df["Campaña_key"].isin(claves_c)]
+        out = out[out["Campaña_key"].isin(claves_c)]
 
-    df_c = df_p.copy()
-    if camps_validas:
-        claves_c = {normalizar_clave(c) for c in camps_validas}
-        df_c = df_c[df_c["Campaña_key"].isin(claves_c)]
-    elif camps_sel is not None and len(camps_sel) == 0:
-        df_c = df_c.iloc[0:0]
+    ases_disp_sel = sorted(base_ases_df["Asesor"].dropna().unique())
+    if not ases_disp_sel and todos_ases_disp:
+        ases_disp_sel = list(todos_ases_disp)
 
-    ases_disp_cascada = sorted(df_c["Asesor"].dropna().unique())
+    if ases_sel is not None and ases_sel:
+        claves_a = {normalizar_clave(a) for a in ases_sel}
+        out = out[out["Asesor_key"].isin(claves_a)]
 
-    if ases_sel is None:
-        return df_c, camps_disp_cascada, ases_disp_cascada
-
-    ases_validos = [a for a in ases_sel if a in ases_disp_cascada]
-    df_a = df_c.copy()
-    if ases_validos:
-        claves_a = {normalizar_clave(a) for a in ases_validos}
-        df_a = df_a[df_a["Asesor_key"].isin(claves_a)]
-    elif len(ases_sel) == 0:
-        df_a = df_a.iloc[0:0]
-
-    return df_a, camps_disp_cascada, ases_disp_cascada
-
-
-def default_filtrado(key_name, opciones_actuales, fallback_todas):
-    """Devuelve el default inicial si el widget aún no existe en session_state."""
-    if key_name in st.session_state:
-        return None
-    return [x for x in fallback_todas if x in opciones_actuales]
+    return out, ases_disp_sel
 
 
 def sintesis_dimension(ejes_df, modo, dimension):
@@ -1123,50 +1110,29 @@ if seccion == "Vista por asesor":
 
     f1, f2, f3, f4 = st.columns(4)
     with f1:
-        a_anios_sel = st.multiselect(
-            "Año",
-            options=años_disp,
-            default=default_filtrado("va_anio", años_disp, años_disp),
-            key="va_anio"
-        )
+        a_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="va_anio")
     with f2:
-        a_meses_sel = st.multiselect(
-            "Mes",
-            options=meses_disp,
-            default=default_filtrado("va_mes", meses_disp, meses_disp),
-            key="va_mes"
-        )
-
-    _, camps_cascada_a, _ = calcular_opciones_y_filtrar(
-        df, a_anios_sel, a_meses_sel, camps_sel=None, ases_sel=None
-    )
-    camps_prev_a = st.session_state.get("va_camp", camp_disp)
-    camps_opciones_a = sorted(set(camps_cascada_a) | set(c for c in camps_prev_a if c in camp_disp))
-
+        a_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="va_mes")
     with f3:
-        a_camps_sel = st.multiselect(
-            "Campaña",
-            options=camps_opciones_a,
-            default=default_filtrado("va_camp", camps_opciones_a, camps_cascada_a),
-            key="va_camp"
-        )
+        a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="va_camp")
 
-    _, _, ases_cascada_a = calcular_opciones_y_filtrar(
-        df, a_anios_sel, a_meses_sel, camps_sel=a_camps_sel, ases_sel=None
+    _, ases_opciones_a = aplicar_filtros_libres(
+        df, a_anios_sel, a_meses_sel, a_camps_sel, ases_sel=None,
+        todas_camps_disp=camp_disp, todos_ases_disp=ases_disp
     )
-    ases_prev_a = st.session_state.get("va_ases", ases_disp)
-    ases_opciones_a = sorted(set(ases_cascada_a) | set(a for a in ases_prev_a if a in ases_disp))
+    ases_default_a = [a for a in ases_disp if a in ases_opciones_a]
 
     with f4:
         a_ases_sel = st.multiselect(
             "Asesor",
             options=ases_opciones_a,
-            default=default_filtrado("va_ases", ases_opciones_a, ases_cascada_a),
+            default=ases_default_a if "va_ases" not in st.session_state else None,
             key="va_ases"
         )
 
-    filtrado_ases, _, _ = calcular_opciones_y_filtrar(
-        df, a_anios_sel, a_meses_sel, camps_sel=a_camps_sel, ases_sel=a_ases_sel
+    filtrado_ases, _ = aplicar_filtros_libres(
+        df, a_anios_sel, a_meses_sel, a_camps_sel, ases_sel=a_ases_sel,
+        todas_camps_disp=camp_disp, todos_ases_disp=ases_disp
     )
 
     k1, k2, k3, k4 = st.columns(4)
@@ -1253,36 +1219,15 @@ elif seccion == "Vista por empresa":
 
     fe1, fe2, fe3 = st.columns(3)
     with fe1:
-        e_anios_sel = st.multiselect(
-            "Año",
-            options=años_disp,
-            default=default_filtrado("ve_anio", años_disp, años_disp),
-            key="ve_anio"
-        )
+        e_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="ve_anio")
     with fe2:
-        e_meses_sel = st.multiselect(
-            "Mes",
-            options=meses_disp,
-            default=default_filtrado("ve_mes", meses_disp, meses_disp),
-            key="ve_mes"
-        )
-
-    _, camps_cascada_e, _ = calcular_opciones_y_filtrar(
-        df, e_anios_sel, e_meses_sel, camps_sel=None, ases_sel=None
-    )
-    camps_prev_e = st.session_state.get("ve_camp", camp_disp)
-    camps_opciones_e = sorted(set(camps_cascada_e) | set(c for c in camps_prev_e if c in camp_disp))
-
+        e_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ve_mes")
     with fe3:
-        e_camps_sel = st.multiselect(
-            "Campaña",
-            options=camps_opciones_e,
-            default=default_filtrado("ve_camp", camps_opciones_e, camps_cascada_e),
-            key="ve_camp"
-        )
+        e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ve_camp")
 
-    base_emp, _, _ = calcular_opciones_y_filtrar(
-        df, e_anios_sel, e_meses_sel, camps_sel=e_camps_sel, ases_sel=None
+    base_emp, _ = aplicar_filtros_libres(
+        df, e_anios_sel, e_meses_sel, e_camps_sel, ases_sel=None,
+        todas_camps_disp=camp_disp, todos_ases_disp=ases_disp
     )
 
     sin_filtros_emp = (
@@ -1340,50 +1285,29 @@ else:
 
     fd1, fd2, fd3, fd4 = st.columns(4)
     with fd1:
-        d_anios_sel = st.multiselect(
-            "Año",
-            options=años_disp,
-            default=default_filtrado("da_anio", años_disp, años_disp),
-            key="da_anio"
-        )
+        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
     with fd2:
-        d_meses_sel = st.multiselect(
-            "Mes",
-            options=meses_disp,
-            default=default_filtrado("da_mes", meses_disp, meses_disp),
-            key="da_mes"
-        )
-
-    _, camps_cascada_d, _ = calcular_opciones_y_filtrar(
-        df, d_anios_sel, d_meses_sel, camps_sel=None, ases_sel=None
-    )
-    camps_prev_d = st.session_state.get("da_camp", camp_disp)
-    camps_opciones_d = sorted(set(camps_cascada_d) | set(c for c in camps_prev_d if c in camp_disp))
-
+        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="da_mes")
     with fd3:
-        d_camps_sel = st.multiselect(
-            "Campaña",
-            options=camps_opciones_d,
-            default=default_filtrado("da_camp", camps_opciones_d, camps_cascada_d),
-            key="da_camp"
-        )
+        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
 
-    _, _, ases_cascada_d = calcular_opciones_y_filtrar(
-        df, d_anios_sel, d_meses_sel, camps_sel=d_camps_sel, ases_sel=None
+    _, ases_opciones_d = aplicar_filtros_libres(
+        df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=None,
+        todas_camps_disp=camp_disp, todos_ases_disp=ases_disp
     )
-    ases_prev_d = st.session_state.get("da_ases", ases_disp)
-    ases_opciones_d = sorted(set(ases_cascada_d) | set(a for a in ases_prev_d if a in ases_disp))
+    ases_default_d = [a for a in ases_disp if a in ases_opciones_d]
 
     with fd4:
         d_ases_sel = st.multiselect(
             "Asesor",
             options=ases_opciones_d,
-            default=default_filtrado("da_ases", ases_opciones_d, ases_cascada_d),
+            default=ases_default_d if "da_ases" not in st.session_state else None,
             key="da_ases"
         )
 
-    filtrado_det, _, _ = calcular_opciones_y_filtrar(
-        df, d_anios_sel, d_meses_sel, camps_sel=d_camps_sel, ases_sel=d_ases_sel
+    filtrado_det, _ = aplicar_filtros_libres(
+        df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=d_ases_sel,
+        todas_camps_disp=camp_disp, todos_ases_disp=ases_disp
     )
 
     if filtrado_det.empty:
