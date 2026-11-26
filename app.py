@@ -469,6 +469,15 @@ table.resumen-per td.td-per-q {{
     border: 1px solid #64748b;
     white-space: nowrap;
 }}
+table.resumen-per td.td-per-sin-aud {{
+    background-color: #d1d5db;
+    color: #374151;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 10px;
+    border: 1px solid #64748b;
+    white-space: nowrap;
+}}
 table.resumen-per td.td-per-prom {{
     background-color: #ffffff;
     color: #000000;
@@ -1144,10 +1153,14 @@ def render_cuadros_por_periodo_html(base_emp, camps_sel):
             mes_p = per["Mes"]
             sub_c = df_p[(df_p["Año"] == anio_p) & (df_p["Mes"] == mes_p) & (df_p["Campaña"] == camp)]
             q_c = int(len(sub_c))
-            prom_c = sub_c["Puntaje final"].mean() if q_c > 0 else None
-            prom_txt = fmt_pct(prom_c) if (prom_c is not None and pd.notna(prom_c)) else ""
-            celdas.append(f'<td class="td-per-q">{q_c}</td>')
-            celdas.append(f'<td class="td-per-prom">{prom_txt}</td>')
+            if q_c > 0:
+                prom_c = sub_c["Puntaje final"].mean()
+                prom_txt = fmt_pct(prom_c) if pd.notna(prom_c) else ""
+                celdas.append(f'<td class="td-per-q">{q_c}</td>')
+                celdas.append(f'<td class="td-per-prom">{prom_txt}</td>')
+            else:
+                celdas.append('<td class="td-per-sin-aud"></td>')
+                celdas.append('<td class="td-per-prom"></td>')
         filas_html.append(f"<tr>{''.join(celdas)}</tr>")
 
     celdas_tot = ['<td class="td-per-total-etq">Total</td>']
