@@ -310,7 +310,7 @@ ul[role="listbox"] div,
 .tit-naranja {{ color: #b45309; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-fb {{ color: #0f172a; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 
-/* Matriz Mes x Campaña estilo planilla */
+/* Matriz Mes x Campaña estilo planilla (ajustada al ancho sin scroll lateral) */
 .matriz-emp-titulo {{
     font-size: 15px;
     font-weight: 800;
@@ -329,8 +329,9 @@ ul[role="listbox"] div,
 }}
 table.matriz-emp {{
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
-    font-size: 12.5px;
+    font-size: 11.5px;
     color: #000000;
 }}
 table.matriz-emp th.th-mes {{
@@ -338,9 +339,9 @@ table.matriz-emp th.th-mes {{
     color: #000000;
     font-weight: 800;
     text-align: left;
-    padding: 10px;
+    padding: 7px 6px;
     border: 1px solid #64748b;
-    min-width: 135px;
+    width: 96px;
     white-space: nowrap;
 }}
 table.matriz-emp th.th-camp {{
@@ -348,33 +349,41 @@ table.matriz-emp th.th-camp {{
     color: #ffffff;
     font-weight: 700;
     text-align: center;
-    padding: 9px 8px;
+    padding: 6px 4px;
     border: 1px solid #64748b;
-    min-width: 120px;
+    white-space: normal;
+    line-height: 1.15;
+    overflow-wrap: break-word;
 }}
 table.matriz-emp th.th-prom {{
     background-color: #52525b;
     color: #ffffff;
     font-weight: 800;
     text-align: center;
-    padding: 9px 10px;
+    padding: 6px 5px;
     border: 1px solid #64748b;
-    min-width: 125px;
-    white-space: nowrap;
+    width: 88px;
+    white-space: normal;
+    line-height: 1.15;
 }}
 table.matriz-emp td {{
-    padding: 8px 10px;
+    padding: 6px 4px;
     border: 1px solid #64748b;
     text-align: center;
     vertical-align: middle;
     color: #000000;
     font-weight: 600;
+    font-size: 11px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }}
 table.matriz-emp td.td-mes {{
     text-align: left;
     font-weight: 600;
+    font-size: 11.5px;
     background-color: #ffffff;
+    padding-left: 6px;
 }}
 table.matriz-emp td.td-prom-fila {{
     background-color: #f4f4f5;
@@ -389,7 +398,8 @@ table.matriz-emp tr.fila-total-camp td.td-etq-total {{
     color: #000000;
     text-align: center;
     white-space: normal;
-    line-height: 1.25;
+    line-height: 1.15;
+    font-size: 10.5px;
 }}
 table.matriz-emp tr.fila-total-camp td.td-vacio-final {{
     background-color: #ffffff;
