@@ -310,6 +310,91 @@ ul[role="listbox"] div,
 .tit-naranja {{ color: #b45309; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-fb {{ color: #0f172a; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 
+/* Matriz Mes x Campaña estilo planilla */
+.matriz-emp-titulo {{
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}}
+.matriz-emp-wrap {{
+    width: 100%;
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #94a3b8;
+    border-radius: 6px;
+    margin-bottom: 18px;
+}}
+table.matriz-emp {{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    color: #000000;
+}}
+table.matriz-emp th.th-mes {{
+    background-color: #ffffff;
+    color: #000000;
+    font-weight: 800;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #64748b;
+    min-width: 135px;
+    white-space: nowrap;
+}}
+table.matriz-emp th.th-camp {{
+    background-color: #16a34a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    padding: 9px 8px;
+    border: 1px solid #64748b;
+    min-width: 120px;
+}}
+table.matriz-emp th.th-prom {{
+    background-color: #52525b;
+    color: #ffffff;
+    font-weight: 800;
+    text-align: center;
+    padding: 9px 10px;
+    border: 1px solid #64748b;
+    min-width: 125px;
+    white-space: nowrap;
+}}
+table.matriz-emp td {{
+    padding: 8px 10px;
+    border: 1px solid #64748b;
+    text-align: center;
+    vertical-align: middle;
+    color: #000000;
+    font-weight: 600;
+    white-space: nowrap;
+}}
+table.matriz-emp td.td-mes {{
+    text-align: left;
+    font-weight: 600;
+    background-color: #ffffff;
+}}
+table.matriz-emp td.td-prom-fila {{
+    background-color: #f4f4f5;
+    font-weight: 800;
+}}
+table.matriz-emp tr.fila-total-camp td {{
+    font-weight: 800;
+    border-top: 2px solid #334155;
+}}
+table.matriz-emp tr.fila-total-camp td.td-etq-total {{
+    background-color: #9ca3af;
+    color: #000000;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.25;
+}}
+table.matriz-emp tr.fila-total-camp td.td-vacio-final {{
+    background-color: #ffffff;
+}}
+
 /* Cuadro comparativo con nombre legible y focos completos */
 .cuadro-comp-titulo {{
     font-size: 15px;
@@ -589,7 +674,6 @@ def parsear_mes_texto(mes_raw):
     if texto in MAPA_MES_TEXTO:
         return MAPA_MES_TEXTO[texto]
 
-    # Buscar nombre o abreviatura de mes dentro de textos como "Octubre 2026" o "Oct-26"
     for clave, nombre_mes in MAPA_MES_TEXTO.items():
         if re.search(rf"(?<![a-z0-9]){re.escape(clave)}(?![a-z0-9])", texto):
             return nombre_mes
@@ -624,6 +708,23 @@ def fmt_pct(valor):
     if pd.isna(valor):
         return "Sin datos"
     return f"{round(float(valor))}%"
+
+
+def fmt_pct_dec(valor):
+    if pd.isna(valor):
+        return "-"
+    return f"{float(valor):.2f}%".replace(".", ",")
+
+
+def color_celda_calidad(valor):
+    if pd.isna(valor):
+        return "#9ca3af"
+    v = float(valor)
+    if v < 51.0:
+        return "#e6b8af"
+    if v < 70.0:
+        return "#ffe599"
+    return "#b6d7a8"
 
 
 def convertir_puntaje(valor):
@@ -832,6 +933,68 @@ def mostrar_tabla(datos, columnas=None):
     else:
         tabla = datos if columnas is None else datos[columnas]
         st.dataframe(tabla, use_container_width=True, hide_index=True)
+
+
+def render_matriz_empresa_html(base_emp):
+    df_m = base_emp[base_emp["Mes"] != "Sin mes"].copy()
+    if df_m.empty:
+        st.info("No hay registros con mes válido para construir la matriz.")
+        return
+
+    campañas = sorted(df_m["Campaña"].unique())
+    periodos_df = (
+        df_m[["Año", "Mes", "Mes_orden"]]
+        .drop_duplicates()
+        .sort_values(["Año", "Mes_orden"])
+    )
+
+    headers_html = ['<th class="th-mes">Mes</th>']
+    for camp in campañas:
+        headers_html.append(f'<th class="th-camp">{camp}</th>')
+    headers_html.append('<th class="th-prom">PROMEDIO<br>CALIDAD</th>')
+
+    filas_html = []
+    for _, per in periodos_df.iterrows():
+        anio_p = per["Año"]
+        mes_p = per["Mes"]
+        etq_periodo = f"{mes_p.lower()} {anio_p}" if anio_p != "Sin año" else mes_p.lower()
+
+        sub_per = df_m[(df_m["Año"] == anio_p) & (df_m["Mes"] == mes_p)]
+        celdas = [f'<td class="td-mes">{etq_periodo}</td>']
+
+        vals_fila = []
+        for camp in campañas:
+            val_c = sub_per[sub_per["Campaña"] == camp]["Puntaje final"].mean()
+            if pd.notna(val_c):
+                vals_fila.append(float(val_c))
+                bg = color_celda_calidad(val_c)
+                celdas.append(f'<td style="background-color:{bg};">{fmt_pct_dec(val_c)}</td>')
+            else:
+                celdas.append('<td style="background-color:#9ca3af;"></td>')
+
+        prom_fila = (sum(vals_fila) / len(vals_fila)) if vals_fila else None
+        prom_txt = fmt_pct_dec(prom_fila) if prom_fila is not None else "-"
+        celdas.append(f'<td class="td-prom-fila">{prom_txt}</td>')
+        filas_html.append(f"<tr>{''.join(celdas)}</tr>")
+
+    celdas_total = ['<td class="td-etq-total">Promedio<br>Calidad por<br>campaña</td>']
+    for camp in campañas:
+        val_camp_tot = df_m[df_m["Campaña"] == camp]["Puntaje final"].mean()
+        if pd.notna(val_camp_tot):
+            bg_c = color_celda_calidad(val_camp_tot)
+            celdas_total.append(f'<td style="background-color:{bg_c};">{fmt_pct_dec(val_camp_tot)}</td>')
+        else:
+            celdas_total.append('<td style="background-color:#9ca3af;">-</td>')
+    celdas_total.append('<td class="td-vacio-final"></td>')
+    filas_html.append(f'<tr class="fila-total-camp">{"".join(celdas_total)}</tr>')
+
+    st.markdown(
+        f'<div class="matriz-emp-wrap"><table class="matriz-emp">'
+        f'<thead><tr>{"".join(headers_html)}</tr></thead>'
+        f'<tbody>{"".join(filas_html)}</tbody>'
+        f'</table></div>',
+        unsafe_allow_html=True
+    )
 
 
 def resumen_ejes_criterios(df_crit):
@@ -1295,6 +1458,9 @@ elif seccion == "Vista por empresa":
     if base_emp.empty:
         st.warning("No hay registros a nivel empresa con los filtros seleccionados.")
         st.stop()
+
+    st.markdown('<div class="matriz-emp-titulo">Matriz de calidad por mes y campaña</div>', unsafe_allow_html=True)
+    render_matriz_empresa_html(base_emp)
 
     st.markdown("### Histórico por campaña y mes (Calidad %)")
     hist_emp_camp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Año", "Mes", "Mes_orden", "Campaña"], as_index=False).agg(
