@@ -83,7 +83,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     font-weight: 700;
 }}
 
-/* Contenedor del multiselect: muestra todas las opciones elegidas completas */
+/* Caja del multiselect: muestra opciones completas y deja espacio a la derecha para 'x' y flechita */
 div[data-testid="stMultiSelect"],
 div[data-testid="stMultiSelect"] > div,
 div[data-testid="stMultiSelect"] > div > div,
@@ -91,107 +91,36 @@ div[data-baseweb="select"],
 div[data-baseweb="select"] > div {{
     background-color: {GRIS_DESPLEGABLE} !important;
     color: #000000 !important;
-    border-color: #94a3b8 !important;
+    border-color: #64748b !important;
     border-radius: 6px !important;
-    min-height: 42px !important;
+    min-height: 44px !important;
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
 }}
-div[data-baseweb="select"] > div > div {{
+div[data-baseweb="select"] > div > div:first-child {{
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 5px !important;
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
-    padding: 4px 6px !important;
+    padding: 5px 6px !important;
 }}
 div[data-testid="stMultiSelect"] input,
 div[data-baseweb="select"] input {{
     color: #000000 !important;
-    min-width: 90px !important;
+    min-width: 70px !important;
 }}
 
-/* Flechita del desplegable bien visible en todos los filtros */
-div[data-baseweb="select"] [data-testid="stSelectboxVirtualDropdown"],
-div[data-baseweb="select"] svg {{
-    fill: #0f172a !important;
-    color: #0f172a !important;
-    stroke: #0f172a !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-
-/* Contenedor de íconos derechos del select (clear 'x' y flechita desplegable) */
-div[data-baseweb="select"] > div > div:last-child {{
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    padding-right: 6px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-
-/* Botón 'x' general para borrar selecciones del filtro: alto contraste */
-div[data-baseweb="select"] [aria-label="Clear all"],
-div[data-baseweb="select"] [title="Clear all"],
-div[data-baseweb="select"] div[role="button"] {{
-    background-color: #e2e8f0 !important;
-    border: 1px solid #64748b !important;
-    border-radius: 999px !important;
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    min-height: 22px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-}}
-div[data-baseweb="select"] [aria-label="Clear all"] svg,
-div[data-baseweb="select"] [title="Clear all"] svg,
-div[data-baseweb="select"] div[role="button"] svg {{
-    width: 14px !important;
-    height: 14px !important;
-    color: #0f172a !important;
-    fill: #0f172a !important;
-    stroke: #0f172a !important;
-    stroke-width: 2.5px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-div[data-baseweb="select"] [aria-label="Clear all"]:hover,
-div[data-baseweb="select"] [title="Clear all"]:hover,
-div[data-baseweb="select"] div[role="button"]:hover {{
-    background-color: {VERDE_PRINCIPAL} !important;
-    border-color: {VERDE_OSCURO} !important;
-}}
-div[data-baseweb="select"] [aria-label="Clear all"]:hover svg,
-div[data-baseweb="select"] [title="Clear all"]:hover svg,
-div[data-baseweb="select"] div[role="button"]:hover svg {{
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-}}
-
-/* Flechita indicadora del desplegable (último svg o indicador de apertura) */
-div[data-baseweb="select"] > div > div:last-child svg {{
-    width: 18px !important;
-    height: 18px !important;
-    color: #0f172a !important;
-    fill: #0f172a !important;
-    stroke: #0f172a !important;
-    stroke-width: 2.4px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-
-/* Cada opción elegida (tag) visible completa con su botón × para eliminarla */
+/* TAGS SELECCIONADOS: SIEMPRE VERDE #30b44e CON TEXTO BLANCO (NUNCA ROJO) */
+[data-testid="stMultiSelect"] [data-baseweb="tag"],
+[data-testid="stMultiSelect"] [data-baseweb="tag"]:hover,
+[data-testid="stMultiSelect"] [data-baseweb="tag"]:focus,
+[data-testid="stMultiSelect"] [data-baseweb="tag"][aria-selected="true"],
+div[data-baseweb="select"] [data-baseweb="tag"],
+div[data-baseweb="select"] [data-baseweb="tag"]:hover,
 span[data-baseweb="tag"],
 div[data-baseweb="tag"] {{
     background-color: {VERDE_PRINCIPAL} !important;
@@ -202,41 +131,127 @@ div[data-baseweb="tag"] {{
     max-width: 100% !important;
     height: auto !important;
     min-height: 28px !important;
-    padding: 3px 8px !important;
+    padding: 3px 7px !important;
     margin: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 5px !important;
     overflow: visible !important;
 }}
-span[data-baseweb="tag"] > span,
-div[data-baseweb="tag"] > span {{
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span,
+[data-testid="stMultiSelect"] [data-baseweb="tag"] div,
+div[data-baseweb="select"] [data-baseweb="tag"] span,
+div[data-baseweb="select"] [data-baseweb="tag"] div,
+span[data-baseweb="tag"] span,
+div[data-baseweb="tag"] span {{
     background-color: transparent !important;
+    background: transparent !important;
     color: #ffffff !important;
     white-space: normal !important;
     word-break: break-word !important;
     overflow: visible !important;
     text-overflow: clip !important;
     max-width: none !important;
-    font-size: 12.5px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     line-height: 1.25 !important;
 }}
-span[data-baseweb="tag"] [role="presentation"],
-div[data-baseweb="tag"] [role="presentation"],
+[data-testid="stMultiSelect"] [data-baseweb="tag"] svg,
+div[data-baseweb="select"] [data-baseweb="tag"] svg,
 span[data-baseweb="tag"] svg,
 div[data-baseweb="tag"] svg {{
     background-color: transparent !important;
     color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
-    stroke-width: 2.5px !important;
+    stroke-width: 2.6px !important;
     width: 14px !important;
     height: 14px !important;
     opacity: 1 !important;
     visibility: visible !important;
     cursor: pointer !important;
     flex-shrink: 0 !important;
+}}
+
+/* CONTENEDOR DERECHO DEL SELECT: BOTÓN 'X' PARA BORRAR + FLECHITA DESPLEGABLE BIEN VISIBLES */
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child,
+div[data-baseweb="select"] > div > div:last-child {{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    padding-right: 8px !important;
+    padding-left: 4px !important;
+    background-color: {GRIS_DESPLEGABLE} !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 5 !important;
+    flex-shrink: 0 !important;
+}}
+
+/* Botón 'x' para borrar selecciones del filtro */
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child,
+div[data-baseweb="select"] > div > div:last-child > div:first-child {{
+    background-color: #dcfce7 !important;
+    border: 1.5px solid {VERDE_OSCURO} !important;
+    border-radius: 50% !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    cursor: pointer !important;
+}}
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child svg,
+div[data-baseweb="select"] > div > div:last-child > div:first-child svg {{
+    width: 13px !important;
+    height: 13px !important;
+    color: {VERDE_OSCURO} !important;
+    fill: {VERDE_OSCURO} !important;
+    stroke: {VERDE_OSCURO} !important;
+    stroke-width: 2.8px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}}
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child:hover,
+div[data-baseweb="select"] > div > div:last-child > div:first-child:hover {{
+    background-color: {VERDE_PRINCIPAL} !important;
+}}
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child:hover svg,
+div[data-baseweb="select"] > div > div:last-child > div:first-child:hover svg {{
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+}}
+
+/* Flechita del desplegable */
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:last-child,
+div[data-baseweb="select"] > div > div:last-child > div:last-child {{
+    background-color: #e2e8f0 !important;
+    border: 1.5px solid #0f172a !important;
+    border-radius: 5px !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}}
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:last-child svg,
+div[data-baseweb="select"] > div > div:last-child > div:last-child svg {{
+    width: 14px !important;
+    height: 14px !important;
+    color: #0f172a !important;
+    fill: #0f172a !important;
+    stroke: #0f172a !important;
+    stroke-width: 2.8px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }}
 
 /* Menú desplegable abierto para elegir opciones */
