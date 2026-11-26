@@ -568,30 +568,12 @@ def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False):
     return fig
 
 
-def colorear_df(df_mostrar):
-    def estilo_fila(fila):
-        estilos = [""] * len(fila)
-        for idx, col in enumerate(fila.index):
-            c_low = col.lower()
-            if "crític" in c_low or "incumpl" in c_low:
-                estilos[idx] = f"color: {ROJO_CRITICO}; font-weight: 700;"
-            elif "mejora" in c_low or "trabajar" in c_low or "desarrollo" in c_low:
-                estilos[idx] = f"color: {NARANJA_TRABAJAR}; font-weight: 700;"
-            elif "positiv" in c_low or "cumpl" in c_low:
-                estilos[idx] = f"color: {VERDE_PRINCIPAL}; font-weight: 700;"
-        return estilos
-    return df_mostrar.style.apply(estilo_fila, axis=1)
-
-
-def mostrar_tabla(datos, columnas=None, colorear=False):
+def mostrar_tabla(datos, columnas=None):
     if datos.empty:
         st.info("No hay datos para mostrar con la selección actual.")
     else:
         tabla = datos if columnas is None else datos[columnas]
-        if colorear:
-            st.dataframe(colorear_df(tabla), use_container_width=True, hide_index=True)
-        else:
-            st.dataframe(tabla, use_container_width=True, hide_index=True)
+        st.dataframe(tabla, use_container_width=True, hide_index=True)
 
 
 def resumen_ejes_criterios(df_crit):
@@ -627,12 +609,25 @@ def resumen_ejes_criterios(df_crit):
     return res.sort_values(["% Crítico_num", "% Mejora_num", "Descuento"], ascending=[False, False, False])
 
 
+def aplicar_filtros_independientes(base_df, anios_sel, meses_sel, camps_sel, ases_sel,
+                                   todos_anios, todos_meses, todas_camps, todos_ases):
+    out = base_df.copy()
+    if anios_sel and not todos_anios:
+        out = out[out["Año"].isin(anios_sel)]
+    if meses_sel and not todos_meses:
+        out = out[out["Mes"].isin(meses_sel)]
+    if camps_sel and not todas_camps:
+        out = out[out["Campaña"].isin(camps_sel)]
+    if ases_sel and not todos_ases:
+        out = out[out["Asesor"].isin(ases_sel)]
+    return out
+
+
 # =====================================================
 # CARGA DE DATOS
 # =====================================================
 try:
     df = leer_mediciones()
-    detalle_criterios = construir_detalle_criterios(df)
 except Exception as error:
     st.error("No se pudieron cargar los datos desde Google Sheets.")
     st.exception(error)
@@ -642,87 +637,97 @@ if df.empty:
     st.warning("Todavía no hay auditorías para mostrar.")
     st.stop()
 
+años_disp = sorted([a for a in df["Año"].dropna().unique() if a != "Sin año"])
+meses_disp = ordenar_meses(df["Mes"].dropna().unique())
+camp_disp = sorted(df["Campaña"].dropna().unique())
+ases_disp = sorted(df["Asesor"].dropna().unique())
+
 # =====================================================
-# MENÚ LATERAL IZQUIERDO (SECCIONES + FILTROS)
+# MENÚ LATERAL IZQUIERDO (SECCIONES + FILTROS INDEPENDIENTES)
 # =====================================================
 with st.sidebar:
     st.markdown("## Navegación")
     seccion = st.radio(
-        "Ir a vista:",
+        "Seleccionar vista:",
         options=["Por Asesor", "Empresa", "Detalle de auditorías"],
         index=0,
         key="menu_lateral_seccion"
     )
 
     st.divider()
-    st.markdown("## Filtros")
 
-    años_disp = sorted([a for a in df["Año"].dropna().unique() if a != "Sin año"])
-    años_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="filtro_anio")
+    if seccion == "Por Asesor":
+        st.markdown("## Filtros — Por Asesor")
+        a_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="ases_filtro_anio")
+        a_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ases_filtro_mes")
+        a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ases_filtro_camp")
 
-    meses_disp = ordenar_meses(df["Mes"].dropna().unique())
-    meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="filtro_mes")
+        # Asesores disponibles según las campañas elegidas en Por Asesor
+        base_ases_disp = df.copy()
+        if a_anios_sel and set(a_anios_sel) != set(años_disp):
+            base_ases_disp = base_ases_disp[base_ases_disp["Año"].isin(a_anios_sel)]
+        if a_meses_sel and set(a_meses_sel) != set(meses_disp):
+            base_ases_disp = base_ases_disp[base_ases_disp["Mes"].isin(a_meses_sel)]
+        if a_camps_sel and set(a_camps_sel) != set(camp_disp):
+            base_ases_disp = base_ases_disp[base_ases_disp["Campaña"].isin(a_camps_sel)]
 
-    camp_disp = sorted(df["Campaña"].dropna().unique())
-    camp_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="filtro_camp")
+        ases_disp_vista = sorted(base_ases_disp["Asesor"].dropna().unique())
+        a_ases_sel = st.multiselect("Asesor", options=ases_disp_vista, default=ases_disp_vista, key="ases_filtro_ases")
 
-    ases_disp = sorted(df["Asesor"].dropna().unique())
-    ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="filtro_ases")
+    elif seccion == "Empresa":
+        st.markdown("## Filtros — Empresa")
+        e_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="emp_filtro_anio")
+        e_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="emp_filtro_mes")
+        e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="emp_filtro_camp")
+        e_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="emp_filtro_ases")
 
-todos_anios_sel = (set(años_sel) == set(años_disp)) if años_disp else True
-todos_meses_sel = (set(meses_sel) == set(meses_disp)) if meses_disp else True
-todas_camp_sel = (set(camp_sel) == set(camp_disp)) if camp_disp else True
-todos_ases_sel = (set(ases_sel) == set(ases_disp)) if ases_disp else True
-
-base_tiempo = df.copy()
-if años_sel and not todos_anios_sel:
-    base_tiempo = base_tiempo[base_tiempo["Año"].isin(años_sel)]
-if meses_sel and not todos_meses_sel:
-    base_tiempo = base_tiempo[base_tiempo["Mes"].isin(meses_sel)]
-
-filtrado = base_tiempo.copy()
-if camp_sel and not todas_camp_sel:
-    filtrado = filtrado[filtrado["Campaña"].isin(camp_sel)]
-if ases_sel and not todos_ases_sel:
-    filtrado = filtrado[filtrado["Asesor"].isin(ases_sel)]
-
-base_asesor_analisis = base_tiempo.copy()
-if ases_sel and not todos_ases_sel:
-    base_asesor_analisis = base_asesor_analisis[base_asesor_analisis["Asesor"].isin(ases_sel)]
-
-if filtrado.empty and base_asesor_analisis.empty:
-    st.warning("No hay registros con los filtros seleccionados.")
-    st.stop()
-
-detalle_asesores_completo = construir_detalle_criterios(base_asesor_analisis)
+    else:
+        st.markdown("## Filtros — Detalle de auditorías")
+        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="det_filtro_anio")
+        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="det_filtro_mes")
+        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="det_filtro_camp")
+        d_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="det_filtro_ases")
 
 # =====================================================
-# INDICADORES SUPERIORES
-# =====================================================
-st.subheader("Resumen de métricas")
-k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Auditorías", len(filtrado), delta=f"Total Sheet: {len(df)}")
-k2.metric("Calidad promedio", fmt_pct(filtrado["Puntaje final"].mean() if not filtrado.empty else base_asesor_analisis["Puntaje final"].mean()))
-k3.metric("Asesores", filtrado["Asesor"].nunique() if not filtrado.empty else 0, delta=f"Total Sheet: {df['Asesor'].nunique()}")
-k4.metric("Campañas", filtrado["Campaña"].nunique() if not filtrado.empty else 0, delta=f"Total Sheet: {df['Campaña'].nunique()}")
-k5.metric("Promedio total Sheet", fmt_pct(df["Puntaje final"].mean()))
-
-st.divider()
-
-# =====================================================
-# VISTA 1: POR ASESOR (TARJETAS LADO A LADO)
+# VISTA 1: POR ASESOR (FILTROS INDEPENDIENTES)
 # =====================================================
 if seccion == "Por Asesor":
-    st.subheader("Informe por Asesor Seleccionado")
-    asesores_a_mostrar = sorted(base_asesor_analisis["Asesor"].unique())
+    todos_a_anios = (set(a_anios_sel) == set(años_disp)) if años_disp else True
+    todos_a_meses = (set(a_meses_sel) == set(meses_disp)) if meses_disp else True
+    todos_a_camps = (set(a_camps_sel) == set(camp_disp)) if camp_disp else True
+    todos_a_ases = (set(a_ases_sel) == set(ases_disp_vista)) if ases_disp_vista else True
 
+    filtrado_ases = aplicar_filtros_independientes(
+        df, a_anios_sel, a_meses_sel, a_camps_sel, a_ases_sel,
+        todos_a_anios, todos_a_meses, todos_a_camps, todos_a_ases
+    )
+
+    st.subheader("Resumen de métricas — Por Asesor")
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Auditorías filtradas", len(filtrado_ases), delta=f"Total Sheet: {len(df)}")
+    k2.metric("Calidad promedio", fmt_pct(filtrado_ases["Puntaje final"].mean()))
+    k3.metric("Asesores filtrados", filtrado_ases["Asesor"].nunique(), delta=f"Total Sheet: {df['Asesor'].nunique()}")
+    k4.metric("Campañas filtradas", filtrado_ases["Campaña"].nunique(), delta=f"Total Sheet: {df['Campaña'].nunique()}")
+    k5.metric("Promedio total Sheet", fmt_pct(df["Puntaje final"].mean()))
+
+    st.divider()
+
+    if filtrado_ases.empty:
+        st.warning("No hay auditorías para los asesores y campañas seleccionados.")
+        st.stop()
+
+    detalle_ases = construir_detalle_criterios(filtrado_ases)
+    # Solo asesores que tienen registros en la campaña y filtros seleccionados
+    asesores_a_mostrar = sorted(filtrado_ases["Asesor"].unique())
+
+    st.subheader("Tarjetas por Asesor")
     for idx_inicio in range(0, len(asesores_a_mostrar), 3):
         grupo = asesores_a_mostrar[idx_inicio:idx_inicio + 3]
         cols = st.columns(len(grupo))
 
         for col_idx, nom_asesor in enumerate(grupo):
-            sub_a = base_asesor_analisis[base_asesor_analisis["Asesor"] == nom_asesor].copy()
-            crit_a = detalle_asesores_completo[detalle_asesores_completo["Asesor"] == nom_asesor].copy()
+            sub_a = filtrado_ases[filtrado_ases["Asesor"] == nom_asesor].copy()
+            crit_a = detalle_ases[detalle_ases["Asesor"] == nom_asesor].copy()
             ejes_a = resumen_ejes_criterios(crit_a)
 
             prom_total_a = fmt_pct(sub_a["Puntaje final"].mean())
@@ -775,14 +780,14 @@ if seccion == "Por Asesor":
                     f'<div class="sec-verde"><div class="t-verde">PUNTOS POSITIVOS</div>{txt_pos}</div>'
                     f'<div class="sec-rojo"><div class="t-rojo">PUNTOS CRÍTICOS</div>{txt_crit}</div>'
                     f'<div class="sec-naranja"><div class="t-naranja">PUNTOS A MEJORAR</div>{txt_des}</div>'
-                    f'<div style="font-size:12px; margin-bottom:6px;"><b>Histórico campañas:</b> {txt_camp}</div>'
+                    f'<div style="font-size:12px; margin-bottom:6px;"><b>Campañas en filtro:</b> {txt_camp}</div>'
                     f'<div style="font-size:12px;"><b>Recomendación:</b> {rec_asesor}</div>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
 
-    st.markdown("### Histórico de campañas por asesor seleccionado")
-    hist_ases_camp = base_asesor_analisis.groupby(["Año", "Campaña", "Mes", "Mes_orden", "Asesor"], as_index=False).agg(
+    st.markdown("### Histórico de campañas de los asesores mostrados")
+    hist_ases_camp = filtrado_ases.groupby(["Año", "Campaña", "Mes", "Mes_orden", "Asesor"], as_index=False).agg(
         Auditorías=("Puntaje final", "count"),
         Calidad_num=("Puntaje final", "mean")
     ).sort_values(["Año", "Mes_orden", "Campaña", "Asesor"])
@@ -791,37 +796,33 @@ if seccion == "Por Asesor":
         mostrar_tabla(hist_ases_camp[["Año", "Mes", "Campaña", "Asesor", "Auditorías", "Calidad"]])
 
 # =====================================================
-# VISTA 2: EMPRESA
+# VISTA 2: EMPRESA (FILTROS INDEPENDIENTES)
 # =====================================================
 elif seccion == "Empresa":
-    st.subheader("Análisis a Nivel Empresa")
+    todos_e_anios = (set(e_anios_sel) == set(años_disp)) if años_disp else True
+    todos_e_meses = (set(e_meses_sel) == set(meses_disp)) if meses_disp else True
+    todos_e_camps = (set(e_camps_sel) == set(camp_disp)) if camp_disp else True
+    todos_e_ases = (set(e_ases_sel) == set(ases_disp)) if ases_disp else True
 
-    meses_emp_disp = ordenar_meses(df["Mes"].dropna().unique())
-    meses_emp_sel = st.multiselect(
-        "Filtrar meses para histórico de calidad y campaña (Empresa)",
-        options=meses_emp_disp,
-        default=meses_sel if meses_sel else meses_emp_disp,
-        key="filtro_meses_empresa_vista"
+    base_emp = aplicar_filtros_independientes(
+        df, e_anios_sel, e_meses_sel, e_camps_sel, e_ases_sel,
+        todos_e_anios, todos_e_meses, todos_e_camps, todos_e_ases
     )
 
-    todos_anios_emp = (set(años_sel) == set(años_disp)) if años_disp else True
-    todos_meses_emp = (set(meses_emp_sel) == set(meses_emp_disp)) if meses_emp_disp else True
+    sin_filtros_emp = todos_e_anios and todos_e_meses and todos_e_camps and todos_e_ases
+    total_aud_emp = len(df) if sin_filtros_emp else len(base_emp)
 
-    base_emp = df.copy()
-    if años_sel and not todos_anios_emp:
-        base_emp = base_emp[base_emp["Año"].isin(años_sel)]
-    if meses_emp_sel and not todos_meses_emp:
-        base_emp = base_emp[base_emp["Mes"].isin(meses_emp_sel)]
-
-    total_aud_emp = len(df) if (todos_anios_emp and todos_meses_emp) else len(base_emp)
-
+    st.subheader("Análisis a Nivel Empresa")
     e1, e2, e3, e4 = st.columns(4)
     e1.metric("Calidad empresa", fmt_pct(base_emp["Puntaje final"].mean()))
     e2.metric("Auditorías", total_aud_emp, delta=f"Total Sheet: {len(df)}")
     e3.metric("Campañas", base_emp["Campaña"].nunique(), delta=f"Total Sheet: {df['Campaña'].nunique()}")
     e4.metric("Asesores", base_emp["Asesor"].nunique(), delta=f"Total Sheet: {df['Asesor'].nunique()}")
 
-    # Único gráfico: Campaña, Mes y línea de porcentajes
+    if base_emp.empty:
+        st.warning("No hay registros a nivel empresa con los filtros seleccionados.")
+        st.stop()
+
     st.markdown("### Histórico por campaña y mes (Calidad %)")
     hist_emp_camp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Año", "Mes", "Mes_orden", "Campaña"], as_index=False).agg(
         Auditorías=("Puntaje final", "count"),
@@ -839,7 +840,6 @@ elif seccion == "Empresa":
             use_container_width=True
         )
 
-    # Cuadro de auditorías en Empresa: Año, Mes, Auditorías, Porcentaje
     st.markdown("### Cuadro de auditorías por año y mes")
     cuadro_emp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Año", "Mes", "Mes_orden"], as_index=False).agg(
         Auditorías=("Puntaje final", "count"),
@@ -851,7 +851,6 @@ elif seccion == "Empresa":
     else:
         mostrar_tabla(pd.DataFrame(columns=["Año", "Mes", "Auditorías", "Calidad"]))
 
-    # Tarjetas por campaña: porcentaje promedio según selección previa, positivos, a mejorar, críticos (sin porcentajes), ejes y recomendaciones
     st.markdown("### Tarjetas por campaña")
     crit_emp = construir_detalle_criterios(base_emp)
     campañas_emp = sorted(base_emp["Campaña"].unique())
@@ -902,16 +901,30 @@ elif seccion == "Empresa":
                 )
 
 # =====================================================
-# VISTA 3: DETALLE DE AUDITORÍAS (COMENTARIOS COMPLETOS)
+# VISTA 3: DETALLE DE AUDITORÍAS (FILTROS INDEPENDIENTES)
 # =====================================================
 else:
+    todos_d_anios = (set(d_anios_sel) == set(años_disp)) if años_disp else True
+    todos_d_meses = (set(d_meses_sel) == set(meses_disp)) if meses_disp else True
+    todos_d_camps = (set(d_camps_sel) == set(camp_disp)) if camp_disp else True
+    todos_d_ases = (set(d_ases_sel) == set(ases_disp)) if ases_disp else True
+
+    filtrado_det = aplicar_filtros_independientes(
+        df, d_anios_sel, d_meses_sel, d_camps_sel, d_ases_sel,
+        todos_d_anios, todos_d_meses, todos_d_camps, todos_d_ases
+    )
+
     st.subheader("Detalle de auditorías")
+    if filtrado_det.empty:
+        st.warning("No hay auditorías con los filtros seleccionados.")
+        st.stop()
+
     columnas_detalle = [
         "Fecha", "Asesor", "Campaña", "Año", "Mes", "ID", "Tipo de gestión",
         "Tipificación", "Puntaje final", "Puntos a trabajar",
         "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
     ]
-    detalle = filtrado[columnas_detalle].copy()
+    detalle = filtrado_det[columnas_detalle].copy()
     detalle["Fecha_str"] = detalle["Fecha"].dt.strftime("%d/%m/%Y").fillna("Sin fecha")
     detalle["Calidad"] = detalle["Puntaje final"].apply(fmt_pct)
     detalle = detalle.sort_values("Fecha", ascending=False, na_position="last")
@@ -939,7 +952,7 @@ else:
                 unsafe_allow_html=True
             )
 
-    csv = filtrado[columnas_detalle].to_csv(index=False, sep=";", encoding="utf-8-sig")
+    csv = filtrado_det[columnas_detalle].to_csv(index=False, sep=";", encoding="utf-8-sig")
     st.download_button(
         "Descargar auditorías en CSV",
         data=csv,
