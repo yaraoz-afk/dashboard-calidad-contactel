@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 
@@ -83,12 +84,11 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     font-weight: 700;
 }}
 
-/* Caja del multiselect: muestra opciones completas y deja espacio a la derecha para 'x' y flechita */
-div[data-testid="stMultiSelect"],
-div[data-testid="stMultiSelect"] > div,
-div[data-testid="stMultiSelect"] > div > div,
-div[data-baseweb="select"],
-div[data-baseweb="select"] > div {{
+/* Contenedor de multiselect y tags en verde #30b44e */
+[data-testid="stMultiSelect"],
+[data-testid="stMultiSelect"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"],
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div {{
     background-color: {GRIS_DESPLEGABLE} !important;
     color: #000000 !important;
     border-color: #64748b !important;
@@ -98,163 +98,27 @@ div[data-baseweb="select"] > div {{
     max-height: none !important;
     overflow: visible !important;
 }}
-div[data-baseweb="select"] > div > div:first-child {{
-    display: flex !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 5px !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    padding: 5px 6px !important;
-}}
-div[data-testid="stMultiSelect"] input,
-div[data-baseweb="select"] input {{
-    color: #000000 !important;
-    min-width: 70px !important;
-}}
 
-/* TAGS SELECCIONADOS: SIEMPRE VERDE #30b44e CON TEXTO BLANCO (NUNCA ROJO) */
 [data-testid="stMultiSelect"] [data-baseweb="tag"],
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:hover,
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:focus,
 [data-testid="stMultiSelect"] [data-baseweb="tag"][aria-selected="true"],
-div[data-baseweb="select"] [data-baseweb="tag"],
-div[data-baseweb="select"] [data-baseweb="tag"]:hover,
-span[data-baseweb="tag"],
-div[data-baseweb="tag"] {{
-    background-color: {VERDE_PRINCIPAL} !important;
+[data-baseweb="tag"] {{
     background: {VERDE_PRINCIPAL} !important;
+    background-color: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
     border: 1px solid {VERDE_OSCURO} !important;
     border-radius: 6px !important;
-    max-width: 100% !important;
-    height: auto !important;
-    min-height: 28px !important;
-    padding: 3px 7px !important;
-    margin: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 5px !important;
-    overflow: visible !important;
-}}
-[data-testid="stMultiSelect"] [data-baseweb="tag"] span,
-[data-testid="stMultiSelect"] [data-baseweb="tag"] div,
-div[data-baseweb="select"] [data-baseweb="tag"] span,
-div[data-baseweb="select"] [data-baseweb="tag"] div,
-span[data-baseweb="tag"] span,
-div[data-baseweb="tag"] span {{
-    background-color: transparent !important;
-    background: transparent !important;
-    color: #ffffff !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    max-width: none !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    line-height: 1.25 !important;
-}}
-[data-testid="stMultiSelect"] [data-baseweb="tag"] svg,
-div[data-baseweb="select"] [data-baseweb="tag"] svg,
-span[data-baseweb="tag"] svg,
-div[data-baseweb="tag"] svg {{
-    background-color: transparent !important;
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-    stroke-width: 2.6px !important;
-    width: 14px !important;
-    height: 14px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    cursor: pointer !important;
-    flex-shrink: 0 !important;
 }}
 
-/* CONTENEDOR DERECHO DEL SELECT: BOTÓN 'X' PARA BORRAR + FLECHITA DESPLEGABLE BIEN VISIBLES */
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child,
-div[data-baseweb="select"] > div > div:last-child {{
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    gap: 6px !important;
-    padding-right: 8px !important;
-    padding-left: 4px !important;
-    background-color: {GRIS_DESPLEGABLE} !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    z-index: 5 !important;
-    flex-shrink: 0 !important;
-}}
-
-/* Botón 'x' para borrar selecciones del filtro */
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child,
-div[data-baseweb="select"] > div > div:last-child > div:first-child {{
-    background-color: #dcfce7 !important;
-    border: 1.5px solid {VERDE_OSCURO} !important;
-    border-radius: 50% !important;
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    cursor: pointer !important;
-}}
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child svg,
-div[data-baseweb="select"] > div > div:last-child > div:first-child svg {{
-    width: 13px !important;
-    height: 13px !important;
-    color: {VERDE_OSCURO} !important;
-    fill: {VERDE_OSCURO} !important;
-    stroke: {VERDE_OSCURO} !important;
-    stroke-width: 2.8px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child:hover,
-div[data-baseweb="select"] > div > div:last-child > div:first-child:hover {{
-    background-color: {VERDE_PRINCIPAL} !important;
-}}
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:first-child:hover svg,
-div[data-baseweb="select"] > div > div:last-child > div:first-child:hover svg {{
+[data-testid="stMultiSelect"] [data-baseweb="tag"] *,
+[data-baseweb="tag"] * {{
     color: #ffffff !important;
     fill: #ffffff !important;
     stroke: #ffffff !important;
 }}
 
-/* Flechita del desplegable */
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:last-child,
-div[data-baseweb="select"] > div > div:last-child > div:last-child {{
-    background-color: #e2e8f0 !important;
-    border: 1.5px solid #0f172a !important;
-    border-radius: 5px !important;
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child > div:last-child svg,
-div[data-baseweb="select"] > div > div:last-child > div:last-child svg {{
-    width: 14px !important;
-    height: 14px !important;
-    color: #0f172a !important;
-    fill: #0f172a !important;
-    stroke: #0f172a !important;
-    stroke-width: 2.8px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}}
-
-/* Menú desplegable abierto para elegir opciones */
+/* Menú desplegable abierto */
 div[data-baseweb="popover"],
 div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] > div > div,
@@ -467,6 +331,140 @@ table.tabla-comp tr:nth-child(even) td {{
 }}
 </style>
 """, unsafe_allow_html=True)
+
+# Script para forzar verde #30b44e en tags seleccionados y resaltar 'x' y flechita del desplegable
+components.html("""
+<script>
+(function estilizarFiltrosContactel() {
+    const doc = window.parent.document;
+
+    function aplicarEstilos() {
+        // 1. Tags seleccionados en verde #30b44e con texto blanco y sin recortes
+        const tags = doc.querySelectorAll('[data-testid="stMultiSelect"] [data-baseweb="tag"], [data-baseweb="tag"]');
+        tags.forEach(tag => {
+            tag.style.setProperty("background-color", "#30b44e", "important");
+            tag.style.setProperty("background", "#30b44e", "important");
+            tag.style.setProperty("border", "1px solid #1e7e34", "important");
+            tag.style.setProperty("border-radius", "6px", "important");
+            tag.style.setProperty("color", "#ffffff", "important");
+            tag.style.setProperty("max-width", "100%", "important");
+            tag.style.setProperty("height", "auto", "important");
+            tag.style.setProperty("min-height", "28px", "important");
+            tag.style.setProperty("overflow", "visible", "important");
+
+            tag.querySelectorAll("*").forEach(el => {
+                el.style.setProperty("color", "#ffffff", "important");
+                if (el.tagName.toLowerCase() === "svg" || el.closest("svg")) {
+                    el.style.setProperty("fill", "#ffffff", "important");
+                    el.style.setProperty("stroke", "#ffffff", "important");
+                    el.style.setProperty("stroke-width", "2.6px", "important");
+                    el.style.setProperty("opacity", "1", "important");
+                    el.style.setProperty("visibility", "visible", "important");
+                } else {
+                    el.style.setProperty("background", "transparent", "important");
+                    el.style.setProperty("background-color", "transparent", "important");
+                    el.style.setProperty("white-space", "normal", "important");
+                    el.style.setProperty("overflow", "visible", "important");
+                    el.style.setProperty("text-overflow", "clip", "important");
+                    el.style.setProperty("max-width", "none", "important");
+                }
+            });
+        });
+
+        // 2. Contenedores de multiselect y selectbox: permitir wrap y resaltar 'x' y flechita
+        const selects = doc.querySelectorAll('[data-testid="stMultiSelect"] [data-baseweb="select"] > div, [data-testid="stSelectbox"] [data-baseweb="select"] > div');
+        selects.forEach(box => {
+            box.style.setProperty("background-color", "#f1f5f9", "important");
+            box.style.setProperty("border-color", "#64748b", "important");
+            box.style.setProperty("min-height", "44px", "important");
+            box.style.setProperty("height", "auto", "important");
+            box.style.setProperty("max-height", "none", "important");
+            box.style.setProperty("overflow", "visible", "important");
+
+            const children = box.children;
+            if (children && children.length >= 1) {
+                const leftArea = children[0];
+                leftArea.style.setProperty("display", "flex", "important");
+                leftArea.style.setProperty("flex-wrap", "wrap", "important");
+                leftArea.style.setProperty("align-items", "center", "important");
+                leftArea.style.setProperty("gap", "5px", "important");
+                leftArea.style.setProperty("height", "auto", "important");
+                leftArea.style.setProperty("max-height", "none", "important");
+                leftArea.style.setProperty("overflow", "visible", "important");
+                leftArea.style.setProperty("padding", "5px 6px", "important");
+            }
+
+            if (children && children.length >= 2) {
+                const rightArea = children[children.length - 1];
+                rightArea.style.setProperty("display", "flex", "important");
+                rightArea.style.setProperty("align-items", "center", "important");
+                rightArea.style.setProperty("gap", "6px", "important");
+                rightArea.style.setProperty("padding-right", "8px", "important");
+                rightArea.style.setProperty("padding-left", "4px", "important");
+                rightArea.style.setProperty("background-color", "#f1f5f9", "important");
+                rightArea.style.setProperty("opacity", "1", "important");
+                rightArea.style.setProperty("visibility", "visible", "important");
+                rightArea.style.setProperty("flex-shrink", "0", "important");
+
+                const actionBtns = rightArea.querySelectorAll("div, button, svg");
+                actionBtns.forEach(btn => {
+                    btn.style.setProperty("opacity", "1", "important");
+                    btn.style.setProperty("visibility", "visible", "important");
+                });
+
+                const svgs = rightArea.querySelectorAll("svg");
+                svgs.forEach((svg, idx) => {
+                    svg.style.setProperty("width", "15px", "important");
+                    svg.style.setProperty("height", "15px", "important");
+                    svg.style.setProperty("opacity", "1", "important");
+                    svg.style.setProperty("visibility", "visible", "important");
+                    if (idx === 0 && svgs.length > 1) {
+                        // Botón 'x' para borrar selecciones
+                        const parentBtn = svg.closest("div") || svg.parentElement;
+                        if (parentBtn) {
+                            parentBtn.style.setProperty("background-color", "#dcfce7", "important");
+                            parentBtn.style.setProperty("border", "1.5px solid #1e7e34", "important");
+                            parentBtn.style.setProperty("border-radius", "999px", "important");
+                            parentBtn.style.setProperty("width", "24px", "important");
+                            parentBtn.style.setProperty("height", "24px", "important");
+                            parentBtn.style.setProperty("display", "inline-flex", "important");
+                            parentBtn.style.setProperty("align-items", "center", "important");
+                            parentBtn.style.setProperty("justify-content", "center", "important");
+                        }
+                        svg.style.setProperty("color", "#1e7e34", "important");
+                        svg.style.setProperty("fill", "#1e7e34", "important");
+                        svg.style.setProperty("stroke", "#1e7e34", "important");
+                        svg.style.setProperty("stroke-width", "3px", "important");
+                    } else {
+                        // Flechita desplegable
+                        const parentArrow = svg.closest("div") || svg.parentElement;
+                        if (parentArrow) {
+                            parentArrow.style.setProperty("background-color", "#e2e8f0", "important");
+                            parentArrow.style.setProperty("border", "1.5px solid #0f172a", "important");
+                            parentArrow.style.setProperty("border-radius", "6px", "important");
+                            parentArrow.style.setProperty("width", "24px", "important");
+                            parentArrow.style.setProperty("height", "24px", "important");
+                            parentArrow.style.setProperty("display", "inline-flex", "important");
+                            parentArrow.style.setProperty("align-items", "center", "important");
+                            parentArrow.style.setProperty("justify-content", "center", "important");
+                        }
+                        svg.style.setProperty("color", "#0f172a", "important");
+                        svg.style.setProperty("fill", "#0f172a", "important");
+                        svg.style.setProperty("stroke", "#0f172a", "important");
+                        svg.style.setProperty("stroke-width", "3px", "important");
+                    }
+                });
+            }
+        });
+    }
+
+    aplicarEstilos();
+    const observer = new MutationObserver(aplicarEstilos);
+    observer.observe(doc.body, { childList: true, subtree: true });
+    setInterval(aplicarEstilos, 400);
+})();
+</script>
+""", height=0)
 
 st.title("Calidad y Capacitación")
 st.caption("Panel de seguimiento de desempeño | Contactel")
