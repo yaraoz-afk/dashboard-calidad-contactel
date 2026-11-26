@@ -85,35 +85,23 @@ h1, h2 {{
     color: #1e293b !important;
 }}
 
-/* Encabezado con logo */
-.header-brand-wrap {{
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-top: 6px;
-}}
-.header-brand-logo {{
-    max-height: 54px;
-    width: auto;
-    object-fit: contain;
-    background: #ffffff;
-    padding: 5px 10px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-}}
+/* Logo dentro del menú de vistas (sidebar) */
 .sidebar-brand-wrap {{
     display: flex;
+    align-items: center;
     justify-content: center;
-    margin-bottom: 10px;
-    padding: 6px;
+    margin-bottom: 14px;
+    padding: 8px 10px;
     background: #ffffff;
     border-radius: 8px;
     border: 1px solid #cbd5e1;
 }}
 .sidebar-brand-logo {{
-    max-height: 44px;
+    max-height: 46px;
+    max-width: 100%;
     width: auto;
     object-fit: contain;
+    display: block;
 }}
 
 /* Tarjetas de métricas */
@@ -809,8 +797,8 @@ table.det-aud td.td-bloque {{
 """, unsafe_allow_html=True)
 
 
-def cargar_logo_data_uri():
-    """Carga un archivo local de logo si existe; si no existe, devuelve None sin fallar."""
+def render_logo_contactel_sidebar():
+    """Muestra el logo de Contactel dentro del menú de vistas (archivo local o SVG de marca)."""
     base_dir = Path(__file__).resolve().parent
     candidatos = [
         base_dir / "logo_contactel.png",
@@ -823,26 +811,30 @@ def cargar_logo_data_uri():
             try:
                 raw = ruta.read_bytes()
                 b64 = base64.b64encode(raw).decode("ascii")
-                return f"data:image/png;base64,{b64}"
+                st.markdown(
+                    f'<div class="sidebar-brand-wrap">'
+                    f'<img src="data:image/png;base64,{b64}" alt="Contactel" class="sidebar-brand-logo"/>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+                return
             except OSError:
-                return None
-    return None
+                break
+
+    st.markdown(
+        '<div class="sidebar-brand-wrap">'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90" style="height:44px;width:auto;display:block;">'
+        '<text x="8" y="62" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" fill="#525252">Contactel</text>'
+        '<path d="M276 22 H316 A18 18 0 0 1 334 40 V54 A16 16 0 0 1 318 70 H298 V56 H314 A4 4 0 0 0 318 52 V40 A4 4 0 0 0 314 36 H290 V58 A14 14 0 0 1 276 72 V22 Z" fill="#39a935"/>'
+        '<path d="M294 42 H310 V52 H294 Z" fill="none" stroke="#39a935" stroke-width="6"/>'
+        '</svg>'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 
-logo_uri = cargar_logo_data_uri()
-
-col_tit, col_logo = st.columns([5, 1.5])
-with col_tit:
-    st.title("Calidad y Capacitación")
-    st.caption("Panel de seguimiento de desempeño | Contactel")
-with col_logo:
-    if logo_uri:
-        st.markdown(
-            f'<div class="header-brand-wrap">'
-            f'<img src="{logo_uri}" alt="Contactel" class="header-brand-logo"/>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+st.title("Calidad y Capacitación")
+st.caption("Panel de seguimiento de desempeño | Contactel")
 
 # =====================================================
 # FUENTE DE DATOS
@@ -1946,16 +1938,10 @@ camp_disp = sorted(df["Campaña"].dropna().unique())
 ases_disp = sorted(df["Asesor"].dropna().unique())
 
 # =====================================================
-# MENÚ LATERAL IZQUIERDO (ORDEN SOLICITADO)
+# MENÚ LATERAL IZQUIERDO (CON LOGO EN EL MENÚ DE VISTAS)
 # =====================================================
 with st.sidebar:
-    if logo_uri:
-        st.markdown(
-            f'<div class="sidebar-brand-wrap">'
-            f'<img src="{logo_uri}" alt="Contactel" class="sidebar-brand-logo"/>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+    render_logo_contactel_sidebar()
     st.markdown("## Vistas")
     seccion = st.radio(
         "Seleccionar vista:",
