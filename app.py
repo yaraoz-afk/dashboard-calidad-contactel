@@ -1,122 +1,96 @@
-        index=len(años_asesor) - 1,
-        key="año_historico_asesor"
-    )
-
-    base_asesor_hist = df_con_fecha[
-        (df_con_fecha["Asesor"] == asesor_historico) &
-        (df_con_fecha["Año"] == año_sel_asesor)
-    ].copy()
-
-    b1, b2, b3 = st.columns(3)
-    b1.metric("Auditorías", len(base_asesor_hist))
-    prom_asesor_anual = base_asesor_hist["Puntaje final"].mean()
-    b2.metric(
-        "Promedio anual del asesor",
-        f"{prom_asesor_anual:.1f}%" if pd.notna(prom_asesor_anual) else "Sin datos"
-    )
-    b3.metric("Campañas", base_asesor_hist["Campaña"].nunique())
-
-    st.markdown("#### Evolución mensual: una línea por campaña")
-    asesor_mes_camp = base_asesor_hist.groupby(
-        ["Mes", "Campaña"], as_index=False
-    ).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad=("Puntaje final", "mean")
-    ).sort_values(["Mes", "Campaña"])
-
-    if not asesor_mes_camp.empty:
-        fig = px.line(
-            asesor_mes_camp, x="Mes", y="Calidad", color="Campaña",
-            markers=True, labels={"Mes": "Mes", "Calidad": "Calidad promedio (%)"}
-        )
-        st.plotly_chart(
-            estilo_grafico(
-                fig, f"Evolución mensual por campaña | {asesor_historico}",
-                "Mes", "Calidad (%)"
-            ),
-            use_container_width=True
-        )
-
-        tabla_asesor_mes = asesor_mes_camp.copy()
-        tabla_asesor_mes["Calidad"] = tabla_asesor_mes["Calidad"].round(1)
-        mostrar_tabla(tabla_asesor_mes)
-
-    st.markdown("#### Promedio anual por campaña del asesor")
-    asesor_por_camp = base_asesor_hist.groupby("Campaña", as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad=("Puntaje final", "mean")
-    ).sort_values("Calidad", ascending=False)
-    asesor_por_camp["Calidad"] = asesor_por_camp["Calidad"].round(1)
-    mostrar_tabla(asesor_por_camp)
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 # =====================================================
-# 6. CRITERIOS Y DETALLE DE AUDITORÍAS
+# CONFIGURACIÓN GENERAL
 # =====================================================
-with tab6:
-    st.subheader("Análisis general de criterios")
-    if not detalle_filtrado.empty:
-        resumen_criterios = detalle_filtrado.groupby("Criterio").agg(
-            Evaluaciones=("Respuesta", "count"),
-            SI=("Respuesta", lambda x: x.isin(["si", "sí"]).sum()),
-            NO=("Respuesta", lambda x: (x == "no").sum()),
-            Mejoras=("Respuesta", lambda x: (x == "punto de mejora").sum()),
-            NA=("Respuesta", lambda x: (x == "n/a").sum()),
-            Descuento=("Descuento", "sum")
-        ).reset_index()
-
-        resumen_criterios["% cumplimiento"] = (
-            (resumen_criterios["SI"] + resumen_criterios["NA"]) /
-            resumen_criterios["Evaluaciones"] * 100
-        )
-        resumen_criterios["% incumplimiento"] = (
-            resumen_criterios["NO"] /
-            resumen_criterios["Evaluaciones"] * 100
-        )
-
-        mayores = resumen_criterios.sort_values("Descuento", ascending=False)
-        fig = px.bar(
-            mayores, x="Descuento", y="Criterio", orientation="h",
-            labels={"Descuento": "Puntos descontados", "Criterio": "Criterio"}
-        )
-        st.plotly_chart(
-            estilo_grafico(fig, "Criterios con mayor descuento", "Puntos", "Criterio"),
-            use_container_width=True
-        )
-        tabla_criterios = resumen_criterios.round(1)
-        mostrar_tabla(tabla_criterios)
-
-    st.divider()
-    st.subheader("Detalle de auditorías")
-    columnas_detalle = [
-        "Fecha", "Asesor", "Campaña", "ID", "Tipo de gestión",
-        "Tipificación", "Puntaje final", "Puntos a trabajar",
-        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
-    ]
-    detalle = filtrado[columnas_detalle].copy()
-    detalle["Fecha"] = detalle["Fecha"].dt.strftime("%d/%m/%Y")
-    detalle["Puntaje final"] = detalle["Puntaje final"].round(1)
-    mostrar_tabla(detalle.sort_values("Fecha", ascending=False))
-
-    csv = filtrado[columnas_detalle].to_csv(
-        index=False, sep=";", encoding="utf-8-sig"
-    )
-    st.download_button(
-        "Descargar auditorías en CSV",
-        data=csv,
-        file_name="auditorias_calidad_contactel.csv",
-        mime="text/csv"
-    )
-
-# =====================================================
-# PIE Y ACTUALIZACIÓN
-# =====================================================
-st.divider()
-st.caption(
-    "Calidad y Capacitación | Contactel | "
-    "Actualización automática de datos cada 5 minutos."
+st.set_page_config(
+    page_title="Calidad y Capacitación | Contactel",
+    page_icon="📊",
+    layout="wide"
 )
-st.caption("La columna AC (Acción) está excluida del análisis y de las vistas.")
 
-if st.button("Actualizar datos ahora"):
-    st.cache_data.clear()
-    st.rerun()
+st.markdown("""
+<style>
+.stApp {background-color:#F5F8F6;}
+h1, h2, h3, h4, p, label, span, div {color:#17211C;}
+div[data-testid="stMetric"] {
+    background:white; border:1px solid #DCE8E1;
+    padding:14px; border-radius:10px;
+}
+div[data-testid="stMetric"] label {color:#26332C !important;}
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color:#111111 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("Calidad y Capacitación")
+st.caption("Panel de seguimiento de desempeño | Contactel")
+
+# =====================================================
+# FUENTE DE DATOS
+# =====================================================
+URL_MEDICION = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/"
+    "pub?gid=0&single=true&output=csv"
+)
+
+# =====================================================
+# PONDERACIONES Y CRITERIOS
+# =====================================================
+PONDERACIONES = {
+    "Genera conexión positiva y de confianza en presentación": (5, 5),
+    "Explica motivo de llamada claramente": (5, 5),
+    "Explora necesidades reales": (5, 8),
+    "Escucha activa": (10, 12),
+    "Propuesta adaptada al cliente": (6, 3),
+    "Explica beneficios": (3, 5),
+    "Usa ejemplos / comparaciones": (3, 5),
+    "No realiza monólogo": (5, 2),
+    "Avanza hacia el cierre": (8, 10),
+    "Identifica objeción real": (5, 5),
+    "Maneja objeciones": (10, 20),
+    "Realiza cierres parciales": (4, 3),
+    "Indica Valor a abonar": (5, 5),
+    "Sin connotación de obligatoriedad": (6, 2),
+    "Realiza de forma correcta cierres legales": (5, 5),
+    "Tono natural y entusiasta": (3, 1),
+    "Evita frases robotizadas": (5, 2),
+    "Tuteo al cliente/Cortesía": (7, 2)
+}
+
+CRITERIOS = [
+    "Genera conexión positiva y de confianza en presentación",
+    "Explica motivo de llamada claramente",
+    "Tipo de preguntas realizadas",
+    "Explora necesidades reales",
+    "Escucha activa",
+    "Propuesta adaptada al cliente",
+    "Explica beneficios",
+    "Usa ejemplos / comparaciones",
+    "No realiza monólogo",
+    "Avanza hacia el cierre",
+    "Identifica objeción real",
+    "Maneja objeciones",
+    "Realiza cierres parciales",
+    "Indica Valor a abonar",
+    "Sin connotación de obligatoriedad",
+    "Realiza de forma correcta cierres legales",
+    "Tono natural y entusiasta",
+    "Evita frases robotizadas",
+    "Tuteo al cliente/Cortesía"
+]
+CRITERIOS_PONDERADOS = list(PONDERACIONES.keys())
+
+# =====================================================
+# FUNCIONES
+# =====================================================
+def convertir_puntaje(valor):
+    try:
+        numero = float(str(valor).replace("%", "").replace(",", ".").strip())
+        return numero * 100 if numero <= 1 else numero
+    except (ValueError, TypeError):
