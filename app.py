@@ -1857,13 +1857,13 @@ camp_disp = sorted(df["Campaña"].dropna().unique())
 ases_disp = sorted(df["Asesor"].dropna().unique())
 
 # =====================================================
-# MENÚ LATERAL IZQUIERDO (SOLO LAS 3 VISTAS)
+# MENÚ LATERAL IZQUIERDO (ORDEN SOLICITADO)
 # =====================================================
 with st.sidebar:
     st.markdown("## Vistas")
     seccion = st.radio(
         "Seleccionar vista:",
-        options=["Vista por asesor", "Vista por empresa", "Detalle por auditoria"],
+        options=["Vista por asesor", "Detalle por auditoria", "Vista por empresa"],
         index=0,
         key="menu_lateral_vistas",
         label_visibility="collapsed"
@@ -1979,9 +1979,59 @@ if seccion == "Vista por asesor":
     st.markdown(construir_deduccion_analitica_html(filtrado_ases, "Vista por asesor"), unsafe_allow_html=True)
 
 # =====================================================
-# VISTA 2: VISTA POR EMPRESA
+# VISTA 2: DETALLE POR AUDITORIA
 # =====================================================
-elif seccion == "Vista por empresa":
+elif seccion == "Detalle por auditoria":
+    st.subheader("Detalle por auditoria")
+
+    fd1, fd2, fd3, fd4 = st.columns(4)
+    with fd1:
+        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
+    with fd2:
+        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="da_mes")
+    with fd3:
+        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
+
+    _, ases_opciones_d = filtrar_registros(
+        df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=None,
+        todas_ases_disp=ases_disp
+    )
+    firma_d = (
+        tuple(d_anios_sel or []),
+        tuple(d_meses_sel or []),
+        tuple(normalizar_clave_campana(c) for c in (d_camps_sel or []))
+    )
+    preparar_selector_asesor("da_ases", "da_firma_filtro", firma_d, ases_opciones_d)
+
+    with fd4:
+        d_ases_sel = st.multiselect("Asesor", options=ases_opciones_d, key="da_ases")
+
+    filtrado_det, _ = filtrar_registros(
+        df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=d_ases_sel,
+        todas_ases_disp=ases_disp
+    )
+
+    if filtrado_det.empty:
+        st.warning("No hay auditorías con los filtros seleccionados.")
+        st.stop()
+
+    df_det_items = construir_df_detalle_items(filtrado_det)
+    render_detalle_auditoria_pdf_html(df_det_items)
+
+    csv = df_det_items.to_csv(index=False, sep=";", encoding="utf-8-sig")
+    st.download_button(
+        "Descargar detalle por auditoría en CSV",
+        data=csv,
+        file_name="detalle_por_auditoria_contactel.csv",
+        mime="text/csv"
+    )
+
+    st.markdown(construir_deduccion_analitica_html(filtrado_det, "Detalle por auditoria"), unsafe_allow_html=True)
+
+# =====================================================
+# VISTA 3: VISTA POR EMPRESA
+# =====================================================
+else:
     st.subheader("Vista por empresa")
 
     fe1, fe2, fe3 = st.columns(3)
@@ -2052,56 +2102,6 @@ elif seccion == "Vista por empresa":
     render_cuadros_por_periodo_html(base_emp, e_camps_sel)
 
     st.markdown(construir_deduccion_analitica_html(base_emp, "Vista por empresa"), unsafe_allow_html=True)
-
-# =====================================================
-# VISTA 3: DETALLE POR AUDITORIA
-# =====================================================
-else:
-    st.subheader("Detalle por auditoria")
-
-    fd1, fd2, fd3, fd4 = st.columns(4)
-    with fd1:
-        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
-    with fd2:
-        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="da_mes")
-    with fd3:
-        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
-
-    _, ases_opciones_d = filtrar_registros(
-        df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=None,
-        todas_ases_disp=ases_disp
-    )
-    firma_d = (
-        tuple(d_anios_sel or []),
-        tuple(d_meses_sel or []),
-        tuple(normalizar_clave_campana(c) for c in (d_camps_sel or []))
-    )
-    preparar_selector_asesor("da_ases", "da_firma_filtro", firma_d, ases_opciones_d)
-
-    with fd4:
-        d_ases_sel = st.multiselect("Asesor", options=ases_opciones_d, key="da_ases")
-
-    filtrado_det, _ = filtrar_registros(
-        df, d_anios_sel, d_meses_sel, d_camps_sel, ases_sel=d_ases_sel,
-        todas_ases_disp=ases_disp
-    )
-
-    if filtrado_det.empty:
-        st.warning("No hay auditorías con los filtros seleccionados.")
-        st.stop()
-
-    df_det_items = construir_df_detalle_items(filtrado_det)
-    render_detalle_auditoria_pdf_html(df_det_items)
-
-    csv = df_det_items.to_csv(index=False, sep=";", encoding="utf-8-sig")
-    st.download_button(
-        "Descargar detalle por auditoría en CSV",
-        data=csv,
-        file_name="detalle_por_auditoria_contactel.csv",
-        mime="text/csv"
-    )
-
-    st.markdown(construir_deduccion_analitica_html(filtrado_det, "Detalle por auditoria"), unsafe_allow_html=True)
 
 # =====================================================
 # DIAGNÓSTICO DE LECTURA DEL SHEET (PARA REVISAR CAMPAÑAS)
