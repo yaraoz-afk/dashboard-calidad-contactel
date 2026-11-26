@@ -1,9 +1,11 @@
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 # =====================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN GENERAL
 # =====================================================
 
 st.set_page_config(
@@ -12,21 +14,116 @@ st.set_page_config(
     layout="wide"
 )
 
+# Paleta visual
+VERDE = "#176B46"
+VERDE_MEDIO = "#238653"
+VERDE_CLARO = "#DCEFE3"
+VERDE_OSCURO = "#174D3A"
+NARANJA = "#E58A36"
+ROJO = "#C94C4C"
+GRIS = "#64776C"
+FONDO = "#F3F6F4"
+BORDE = "#DCE8E1"
+
 st.markdown("""
 <style>
-.stApp {background-color:#F5F8F6;}
-h1,h2,h3 {color:#174D3A;}
-div[data-testid="stMetric"] {
-    background:white;
-    border:1px solid #DCE8E1;
-    padding:14px;
-    border-radius:10px;
+.stApp {
+    background-color: #F3F6F4;
+    color: #263B32;
 }
+
+html, body, [class*="css"] {
+    color: #263B32 !important;
+}
+
+h1, h2, h3, h4, p, label {
+    color: #263B32;
+}
+
+h1 {
+    color: #174D3A !important;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+h2, h3 {
+    color: #246348 !important;
+    font-weight: 700;
+}
+
+h4 {
+    color: #176B46 !important;
+}
+
+div[data-testid="stMetric"] {
+    background: #FFFFFF;
+    border: 1px solid #DCE8E1;
+    border-radius: 13px;
+    padding: 18px;
+    box-shadow: 0 3px 10px rgba(25, 65, 45, 0.05);
+}
+
+div[data-testid="stMetricLabel"] {
+    color: #60766A !important;
+    font-size: 14px;
+}
+
+div[data-testid="stMetricValue"] {
+    color: #174D3A !important;
+    font-size: 30px;
+    font-weight: 800;
+}
+
+button[data-baseweb="tab"] {
+    color: #486456 !important;
+    font-weight: 600;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #176B46 !important;
+    border-bottom: 3px solid #238653;
+}
+
+div[data-baseweb="select"] {
+    background-color: white;
+}
+
+div[data-testid="stDataFrame"] {
+    background-color: white;
+    border-radius: 10px;
+}
+
+hr {
+    border-color: #DCE8E1;
+}
+
+.stButton button, .stDownloadButton button {
+    background-color: #176B46;
+    color: white !important;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    padding: 8px 18px;
+}
+
+.stButton button:hover, .stDownloadButton button:hover {
+    background-color: #104D32;
+    color: white !important;
+}
+
+div[data-testid="stCaptionContainer"] p {
+    color: #64776C !important;
+}
+
+div[data-testid="stMarkdownContainer"] p {
+    color: #263B32;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 st.title("Calidad y Capacitación")
-st.caption("Panel de seguimiento de desempeño | Contactel")
+st.caption("Panel ejecutivo de seguimiento de desempeño | Contactel")
 
 # =====================================================
 # FUENTES DE DATOS
@@ -36,12 +133,6 @@ URL_MEDICION = (
     "https://docs.google.com/spreadsheets/d/e/"
     "2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/"
     "pub?gid=0&single=true&output=csv"
-)
-
-URL_HOJA2 = (
-    "https://docs.google.com/spreadsheets/d/e/"
-    "2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/"
-    "pub?gid=1421200336&single=true&output=csv"
 )
 
 # =====================================================
@@ -94,7 +185,114 @@ CRITERIOS = [
 CRITERIOS_PONDERADOS = list(PONDERACIONES.keys())
 
 # =====================================================
-# FUNCIONES
+# FUNCIONES DE DISEÑO DE GRÁFICOS
+# =====================================================
+
+def formato_grafico(fig, altura=390):
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF",
+        font=dict(
+            family="Arial",
+            size=12,
+            color="#263B32"
+        ),
+        margin=dict(l=15, r=25, t=55, b=25),
+        height=altura,
+        hoverlabel=dict(
+            bgcolor="#174D3A",
+            font_color="white",
+            font_size=12
+        ),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="#E8EFEB",
+            zeroline=False,
+            title_font=dict(color="#486456")
+        ),
+        yaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            title_font=dict(color="#486456")
+        ),
+        title=dict(
+            font=dict(
+                size=17,
+                color="#174D3A"
+            ),
+            x=0.02,
+            xanchor="left"
+        )
+    )
+    return fig
+
+
+def grafico_barras(
+    datos,
+    x,
+    y,
+    titulo,
+    horizontal=False,
+    color=VERDE_MEDIO,
+    formato_texto=".1f",
+    sufijo=""
+):
+    if horizontal:
+        fig = px.bar(
+            datos,
+            x=x,
+            y=y,
+            orientation="h",
+            text=x,
+            title=titulo
+        )
+
+        fig.update_traces(
+            marker_color=color,
+            texttemplate="%{text:" + formato_texto + "}" + sufijo,
+            textposition="outside",
+            cliponaxis=False
+        )
+
+    else:
+        fig = px.bar(
+            datos,
+            x=x,
+            y=y,
+            text=y,
+            title=titulo
+        )
+
+        fig.update_traces(
+            marker_color=color,
+            texttemplate="%{text:" + formato_texto + "}" + sufijo,
+            textposition="outside",
+            cliponaxis=False
+        )
+
+    return formato_grafico(fig)
+
+
+def grafico_lineas(datos, x, y, titulo, color=VERDE_MEDIO):
+    fig = px.line(
+        datos,
+        x=x,
+        y=y,
+        markers=True,
+        title=titulo
+    )
+
+    fig.update_traces(
+        line=dict(color=color, width=3),
+        marker=dict(size=8, color=color)
+    )
+
+    return formato_grafico(fig)
+
+
+# =====================================================
+# FUNCIONES DE DATOS
 # =====================================================
 
 def convertir_puntaje(valor):
@@ -139,6 +337,7 @@ def calcular_puntaje(fila):
 
         if respuesta in ["si", "n/a"]:
             obtenido += peso
+
         elif respuesta == "punto de mejora":
             obtenido += peso / 2
 
@@ -157,10 +356,6 @@ def leer_mediciones():
         keep_default_na=False
     )
 
-    # Los registros comienzan en la fila 10.
-    # Se toman las columnas A:AG.
-    # La columna AC (Acción) se elimina del análisis.
-
     datos = bruto.iloc[9:, :33].copy()
 
     datos.columns = [
@@ -175,6 +370,7 @@ def leer_mediciones():
         "Tipificación correcta"
     ]
 
+    # Se excluye la columna AC: Acción
     datos = datos.drop(columns=["Acción"])
 
     for col in datos.columns:
@@ -261,7 +457,7 @@ def construir_detalle_criterios(datos):
 
 
 # =====================================================
-# CARGA DE DATOS
+# CARGA DE INFORMACIÓN
 # =====================================================
 
 try:
@@ -279,10 +475,10 @@ if df.empty:
 
 
 # =====================================================
-# FILTROS GENERALES
+# FILTROS
 # =====================================================
 
-st.subheader("Filtros generales")
+st.markdown("### Filtros de consulta")
 
 c1, c2, c3 = st.columns(3)
 
@@ -335,7 +531,6 @@ if not fechas.empty:
     else:
         fecha_inicio = periodo
         fecha_fin = periodo
-
 else:
     fecha_inicio, fecha_fin = None, None
 
@@ -362,17 +557,17 @@ detalle_filtrado = construir_detalle_criterios(filtrado)
 
 
 # =====================================================
-# INDICADORES PRINCIPALES
+# INDICADORES GENERALES
 # =====================================================
 
 st.divider()
-st.subheader("Indicadores generales")
+st.markdown("### Indicadores generales")
 
 k1, k2, k3, k4 = st.columns(4)
 
-k1.metric("Auditorías", len(filtrado))
-
 promedio = filtrado["Puntaje final"].mean()
+
+k1.metric("Auditorías", len(filtrado))
 
 k2.metric(
     "Calidad promedio",
@@ -381,6 +576,8 @@ k2.metric(
 
 k3.metric("Asesores", filtrado["Asesor"].nunique())
 k4.metric("Campañas", filtrado["Campaña"].nunique())
+
+st.divider()
 
 
 # =====================================================
@@ -407,16 +604,28 @@ with tab1:
     evolucion = filtrado.dropna(subset=["Fecha"]).copy()
 
     if not evolucion.empty:
-        evolucion = (
-            evolucion.groupby("Fecha")["Puntaje final"]
-            .mean()
-            .reset_index()
-            .set_index("Fecha")
+
+        evolucion["Mes"] = evolucion["Fecha"].dt.to_period("M").astype(str)
+
+        evolucion_mensual = evolucion.groupby("Mes").agg(
+            Calidad=("Puntaje final", "mean"),
+            Auditorías=("Puntaje final", "count")
+        ).reset_index()
+
+        evolucion_mensual["Calidad"] = evolucion_mensual["Calidad"].round(1)
+
+        fig = grafico_lineas(
+            evolucion_mensual,
+            "Mes",
+            "Calidad",
+            "Evolución mensual de calidad"
         )
 
-        st.line_chart(evolucion)
+        fig.update_yaxes(title="Calidad (%)")
+        st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Resultados por asesor")
+    st.divider()
+    st.subheader("Desempeño por asesor")
 
     tabla = filtrado.groupby("Asesor").agg(
         Auditorías=("Puntaje final", "count"),
@@ -424,16 +633,29 @@ with tab1:
     ).reset_index()
 
     tabla["Calidad"] = tabla["Calidad"].round(1)
-    tabla = tabla.sort_values("Calidad", ascending=False)
+    tabla = tabla.sort_values("Calidad", ascending=True)
 
-    st.bar_chart(tabla.set_index("Asesor")["Calidad"])
+    fig = grafico_barras(
+        tabla,
+        "Calidad",
+        "Asesor",
+        "Calidad promedio por asesor",
+        horizontal=True,
+        color=VERDE_MEDIO,
+        sufijo="%"
+    )
+
+    fig.update_xaxes(title="Calidad (%)")
+    fig.update_yaxes(title="")
+    st.plotly_chart(fig, use_container_width=True)
 
     st.dataframe(
-        tabla,
+        tabla.sort_values("Calidad", ascending=False),
         use_container_width=True,
         hide_index=True
     )
 
+    st.divider()
     st.subheader("Resultados por tipo de gestión")
 
     por_tipo = filtrado.groupby("Tipo normalizado").agg(
@@ -442,6 +664,24 @@ with tab1:
     ).reset_index()
 
     por_tipo["Calidad"] = por_tipo["Calidad"].round(1)
+
+    fig = px.bar(
+        por_tipo,
+        x="Tipo normalizado",
+        y="Calidad",
+        text="Calidad",
+        title="Calidad promedio por tipo de gestión"
+    )
+
+    fig.update_traces(
+        marker_color=[VERDE_MEDIO, NARANJA][:len(por_tipo)],
+        texttemplate="%{text:.1f}%",
+        textposition="outside"
+    )
+
+    fig.update_yaxes(title="Calidad (%)")
+    fig.update_xaxes(title="")
+    st.plotly_chart(formato_grafico(fig), use_container_width=True)
 
     st.dataframe(
         por_tipo,
@@ -472,8 +712,6 @@ with tab2:
         detalle_filtrado["Asesor"] == asesor
     ].copy()
 
-    # Indicadores individuales
-
     a1, a2, a3, a4 = st.columns(4)
 
     promedio_individual = individual["Puntaje final"].mean()
@@ -498,7 +736,7 @@ with tab2:
 
     st.divider()
 
-    # 1. Descuentos por criterio
+    # DESCUENTOS
 
     st.markdown("### 1. Descuentos por criterio")
 
@@ -511,17 +749,23 @@ with tab2:
             Mejoras=("Respuesta", lambda x: (x == "punto de mejora").sum())
         ).reset_index()
 
-        descuentos = descuentos.sort_values(
+        descuentos = descuentos.sort_values("Descuento", ascending=True)
+
+        fig = grafico_barras(
+            descuentos,
             "Descuento",
-            ascending=False
+            "Criterio",
+            "Puntos descontados por criterio",
+            horizontal=True,
+            color=NARANJA
         )
 
-        st.bar_chart(
-            descuentos.set_index("Criterio")["Descuento"]
-        )
+        fig.update_xaxes(title="Puntos descontados")
+        fig.update_yaxes(title="")
+        st.plotly_chart(fig, use_container_width=True)
 
         st.dataframe(
-            descuentos,
+            descuentos.sort_values("Descuento", ascending=False),
             use_container_width=True,
             hide_index=True
         )
@@ -531,7 +775,7 @@ with tab2:
 
     st.divider()
 
-    # 2. Reincidencias
+    # REINCIDENCIAS
 
     st.markdown("### 2. Reincidencias")
 
@@ -573,13 +817,13 @@ with tab2:
         )
 
         st.caption(
-            "Se consideran reincidencias los criterios que vuelven a aparecer "
-            "como NO o Punto de mejora en distintas auditorías."
+            "Se contabilizan las apariciones de cada criterio como NO "
+            "o Punto de mejora en las auditorías."
         )
 
     st.divider()
 
-    # 3. Fortalezas individuales
+    # FORTALEZAS
 
     st.markdown("### 3. Fortalezas individuales")
 
@@ -609,7 +853,7 @@ with tab2:
 
     st.divider()
 
-    # 4. Evolución mensual de calidad
+    # EVOLUCIÓN MENSUAL
 
     st.markdown("### 4. Evolución mensual de calidad")
 
@@ -628,9 +872,15 @@ with tab2:
             evolucion_mensual["Calidad"].round(1)
         )
 
-        st.line_chart(
-            evolucion_mensual.set_index("Mes")["Calidad"]
+        fig = grafico_lineas(
+            evolucion_mensual,
+            "Mes",
+            "Calidad",
+            "Evolución mensual del asesor"
         )
+
+        fig.update_yaxes(title="Calidad (%)")
+        st.plotly_chart(fig, use_container_width=True)
 
         st.dataframe(
             evolucion_mensual,
@@ -640,7 +890,7 @@ with tab2:
 
     st.divider()
 
-    # 5. Evolución de cada criterio
+    # EVOLUCIÓN POR CRITERIO
 
     st.markdown("### 5. Evolución de cada criterio")
 
@@ -664,7 +914,23 @@ with tab2:
 
         if not tabla_evolucion.empty:
 
-            st.line_chart(tabla_evolucion)
+            fig = px.line(
+                tabla_evolucion.reset_index(),
+                x="Mes",
+                y=tabla_evolucion.columns.tolist(),
+                markers=True,
+                title="Evolución de criterios"
+            )
+
+            fig.update_layout(
+                legend_title="Criterios",
+                height=480
+            )
+
+            st.plotly_chart(
+                formato_grafico(fig, altura=480),
+                use_container_width=True
+            )
 
             criterio_elegido = st.selectbox(
                 "Ver evolución de un criterio específico",
@@ -689,9 +955,19 @@ with tab2:
                 evolucion_un_criterio["% obtenido"].round(1)
             )
 
-            st.line_chart(
-                evolucion_un_criterio.set_index("Mes")["% obtenido"]
+            fig = grafico_lineas(
+                evolucion_un_criterio,
+                "Mes",
+                "% obtenido",
+                "Evolución del criterio seleccionado"
             )
+
+            fig.update_yaxes(
+                title="% de ponderación obtenida",
+                range=[0, 105]
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
             st.dataframe(
                 evolucion_un_criterio,
@@ -701,7 +977,7 @@ with tab2:
 
     st.divider()
 
-    # 6. Historial de auditorías
+    # HISTORIAL
 
     st.markdown("### 6. Historial de auditorías")
 
@@ -741,15 +1017,32 @@ with tab3:
         campañas_resumen["Calidad"].round(1)
     )
 
-    st.bar_chart(
-        campañas_resumen.set_index("Campaña")["Calidad"]
+    campañas_resumen = campañas_resumen.sort_values(
+        "Calidad",
+        ascending=True
     )
 
-    st.dataframe(
+    fig = grafico_barras(
         campañas_resumen,
+        "Calidad",
+        "Campaña",
+        "Calidad promedio por campaña",
+        horizontal=True,
+        color=VERDE_MEDIO,
+        sufijo="%"
+    )
+
+    fig.update_xaxes(title="Calidad (%)")
+    fig.update_yaxes(title="")
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.dataframe(
+        campañas_resumen.sort_values("Calidad", ascending=False),
         use_container_width=True,
         hide_index=True
     )
+
+    st.divider()
 
     st.subheader("Evolución mensual por campaña")
 
@@ -766,7 +1059,23 @@ with tab3:
             aggfunc="mean"
         )
 
-        st.line_chart(evolucion_campañas)
+        fig = px.line(
+            evolucion_campañas.reset_index(),
+            x="Mes",
+            y=evolucion_campañas.columns.tolist(),
+            markers=True,
+            title="Evolución de calidad por campaña"
+        )
+
+        fig.update_layout(
+            legend_title="Campañas",
+            height=440
+        )
+
+        st.plotly_chart(
+            formato_grafico(fig, altura=440),
+            use_container_width=True
+        )
 
 
 # =====================================================
@@ -798,27 +1107,69 @@ with tab4:
             resumen["Evaluaciones"] * 100
         )
 
-        st.markdown("**Criterios con mayor descuento acumulado**")
+        st.markdown("#### Criterios con mayor descuento acumulado")
 
         mayores_descuentos = resumen.sort_values(
             "Descuento",
-            ascending=False
+            ascending=True
         )
 
-        st.bar_chart(
-            mayores_descuentos.set_index("Criterio")["Descuento"]
+        fig = grafico_barras(
+            mayores_descuentos,
+            "Descuento",
+            "Criterio",
+            "Descuentos acumulados por criterio",
+            horizontal=True,
+            color=NARANJA
         )
+
+        fig.update_xaxes(title="Puntos descontados")
+        fig.update_yaxes(title="")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        st.markdown("#### Porcentaje de incumplimientos")
+
+        incumplimientos = resumen.sort_values(
+            "% incumplimiento",
+            ascending=True
+        )
+
+        fig = grafico_barras(
+            incumplimientos,
+            "% incumplimiento",
+            "Criterio",
+            "Incumplimientos por criterio",
+            horizontal=True,
+            color=ROJO,
+            sufijo="%"
+        )
+
+        fig.update_xaxes(
+            title="% de respuestas NO",
+            range=[0, 100]
+        )
+
+        fig.update_yaxes(title="")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        st.markdown("#### Tabla de resultados por criterio")
 
         st.dataframe(
-            resumen.round(1),
+            resumen.round(1).sort_values(
+                "Descuento",
+                ascending=False
+            ),
             use_container_width=True,
             hide_index=True
         )
 
         st.caption(
-            "El análisis de cumplimiento considera SI y N/A como respuestas "
-            "que obtienen la ponderación completa. Los N/A se identifican "
-            "por separado para no confundirlos con criterios efectivamente evaluados."
+            "Los N/A reciben la ponderación completa según la fórmula "
+            "de evaluación. Se muestran por separado de los cumplimientos."
         )
 
 
@@ -864,7 +1215,7 @@ with tab5:
 
 
 # =====================================================
-# ACTUALIZACIÓN
+# PIE DE PÁGINA
 # =====================================================
 
 st.divider()
@@ -874,9 +1225,7 @@ st.caption(
     "Actualización automática de datos cada 5 minutos."
 )
 
-st.caption(
-    "La columna AC (Acción) está excluida del análisis."
-)
+st.caption("La columna AC (Acción) está excluida del análisis.")
 
 if st.button("Actualizar datos ahora"):
     st.cache_data.clear()
