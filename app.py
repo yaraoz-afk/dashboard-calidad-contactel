@@ -1,4 +1,5 @@
 import base64
+import os
 from pathlib import Path
 import re
 import streamlit as st
@@ -90,18 +91,28 @@ h1, h2 {{
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     padding: 8px 10px;
     background: #ffffff;
     border-radius: 8px;
     border: 1px solid #cbd5e1;
 }}
 .sidebar-brand-logo {{
-    max-height: 46px;
+    max-height: 54px;
     max-width: 100%;
     width: auto;
     object-fit: contain;
     display: block;
+}}
+.sidebar-logo-aviso {{
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    color: #78350f;
+    font-size: 11px;
+    border-radius: 6px;
+    padding: 7px 9px;
+    margin-bottom: 12px;
+    line-height: 1.3;
 }}
 
 /* Tarjetas de métricas */
@@ -753,6 +764,35 @@ table.det-aud td.td-bloque {{
     white-space: nowrap;
 }}
 
+/* Cuadro de consulta IA en Vista por empresa */
+.ia-empresa-box {{
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-top: 4px solid {VERDE_PRINCIPAL};
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}}
+.ia-empresa-titulo {{
+    font-size: 15px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}}
+.ia-respuesta-card {{
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid {VERDE_PRINCIPAL};
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1.45;
+}}
+
 /* Deducción final analítica */
 .deduccion-box {{
     background: #ffffff;
@@ -798,7 +838,7 @@ table.det-aud td.td-bloque {{
 
 
 def render_logo_contactel_sidebar():
-    """Muestra el logo de Contactel dentro del menú de vistas (archivo local o SVG de marca)."""
+    """Muestra ÚNICAMENTE el archivo real del logo en el menú lateral; si no existe, avisa sin inventar un dibujo."""
     base_dir = Path(__file__).resolve().parent
     candidatos = [
         base_dir / "logo_contactel.png",
@@ -813,7 +853,7 @@ def render_logo_contactel_sidebar():
                 b64 = base64.b64encode(raw).decode("ascii")
                 st.markdown(
                     f'<div class="sidebar-brand-wrap">'
-                    f'<img src="data:image/png;base64,{b64}" alt="Contactel" class="sidebar-brand-logo"/>'
+                    f'<img src="data:image/png;base64,{b64}" alt="Logo Contactel" class="sidebar-brand-logo"/>'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -822,12 +862,9 @@ def render_logo_contactel_sidebar():
                 break
 
     st.markdown(
-        '<div class="sidebar-brand-wrap">'
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90" style="height:44px;width:auto;display:block;">'
-        '<text x="8" y="62" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" fill="#525252">Contactel</text>'
-        '<path d="M276 22 H316 A18 18 0 0 1 334 40 V54 A16 16 0 0 1 318 70 H298 V56 H314 A4 4 0 0 0 318 52 V40 A4 4 0 0 0 314 36 H290 V58 A14 14 0 0 1 276 72 V22 Z" fill="#39a935"/>'
-        '<path d="M294 42 H310 V52 H294 Z" fill="none" stroke="#39a935" stroke-width="6"/>'
-        '</svg>'
+        '<div class="sidebar-logo-aviso">'
+        '<b>Logo no encontrado:</b> guardá tu archivo como <code>logo_contactel.png</code> '
+        'junto a <code>app.py</code> o en <code>assets/logo_contactel.png</code>.'
         '</div>',
         unsafe_allow_html=True
     )
@@ -1833,6 +1870,158 @@ def render_tabla_completa_html(df_tabla):
     )
 
 
+def obtener_api_key_gemini():
+    try:
+        if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"]:
+            return str(st.secrets["GEMINI_API_KEY"]).strip()
+    except Exception:
+        pass
+    env_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    return env_key if env_key else None
+
+
+def construir_contexto_empresa_para_ia(base_emp):
+    prom_gral = fmt_pct(base_emp["Puntaje final"].mean())
+    total_aud = len(base_emp)
+    n_camp = base_emp["Campaña"].nunique()
+    n_ases = base_emp["Asesor"].nunique()
+
+    por_camp = (
+        base_emp.groupby("Campaña", as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values("Promedio", ascending=False)
+    )
+    lineas_camp = [
+        f"- {r['Campaña']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct(r['Promedio'])}"
+        for _, r in por_camp.iterrows()
+    ]
+
+    df_m = base_emp[base_emp["Mes"] != "Sin mes"]
+    por_mes = (
+        df_m.groupby(["Año", "Mes", "Mes_orden"], as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values(["Año", "Mes_orden"])
+    )
+    lineas_mes = [
+        f"- {r['Mes']} {r['Año']}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct(r['Promedio'])}"
+        for _, r in por_mes.iterrows()
+    ]
+
+    por_ases = (
+        base_emp.groupby("Asesor", as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values("Promedio", ascending=False)
+    )
+    lineas_ases = [
+        f"- {formatear_nombre_recurso(r['Asesor'])}: {int(r['Auditorias'])} auditorías, promedio {fmt_pct(r['Promedio'])}"
+        for _, r in por_ases.iterrows()
+    ]
+
+    crit_df = construir_detalle_criterios(base_emp)
+    ejes = resumen_ejes_criterios(crit_df)
+    lineas_ejes = [
+        f"- {r['Criterio']}: Positivo {r['% Positivo']}, Mejora {r['% Mejora']}, Crítico {r['% Crítico']} ({r['Estado']})"
+        for _, r in ejes.head(8).iterrows()
+    ]
+
+    return (
+        f"Resumen general empresa: {total_aud} auditorías, promedio general {prom_gral}, "
+        f"{n_camp} campañas y {n_ases} asesores.\n"
+        f"Por campaña:\n" + ("\n".join(lineas_camp) if lineas_camp else "- Sin datos") + "\n"
+        f"Por mes:\n" + ("\n".join(lineas_mes) if lineas_mes else "- Sin datos") + "\n"
+        f"Por asesor:\n" + ("\n".join(lineas_ases) if lineas_ases else "- Sin datos") + "\n"
+        f"Principales criterios:\n" + ("\n".join(lineas_ejes) if lineas_ejes else "- Sin datos")
+    )
+
+
+def responder_consulta_empresa_local(pregunta, base_emp):
+    q = normalizar_clave(pregunta)
+    prom_gral = fmt_pct(base_emp["Puntaje final"].mean())
+    total_aud = len(base_emp)
+
+    por_camp = (
+        base_emp.groupby("Campaña", as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values("Promedio", ascending=False)
+    )
+    por_mes = (
+        base_emp[base_emp["Mes"] != "Sin mes"]
+        .groupby(["Año", "Mes", "Mes_orden"], as_index=False)
+        .agg(Auditorias=("Puntaje final", "count"), Promedio=("Puntaje final", "mean"))
+        .sort_values(["Año", "Mes_orden"])
+    )
+    crit_df = construir_detalle_criterios(base_emp)
+    ejes = resumen_ejes_criterios(crit_df)
+
+    if any(k in q for k in ["mejor campaña", "campaña más alta", "mayor calidad", "mejor desempeño"]):
+        if not por_camp.empty:
+            top = por_camp.iloc[0]
+            return (
+                f"La campaña con mayor calidad en la selección actual es <b>{top['Campaña']}</b> "
+                f"con <b>{fmt_pct(top['Promedio'])}</b> ({int(top['Auditorias'])} auditorías)."
+            )
+
+    if any(k in q for k in ["peor campaña", "menor calidad", "más baja", "bajar", "floja"]):
+        if not por_camp.empty:
+            low = por_camp.iloc[-1]
+            return (
+                f"La campaña con menor calidad en la selección actual es <b>{low['Campaña']}</b> "
+                f"con <b>{fmt_pct(low['Promedio'])}</b> ({int(low['Auditorias'])} auditorías)."
+            )
+
+    if any(k in q for k in ["mes", "evolución", "evolucion", "tendencia", "histórico", "historico"]):
+        if not por_mes.empty:
+            items = [f"<b>{r['Mes']} {r['Año']}</b>: {fmt_pct(r['Promedio'])} ({int(r['Auditorias'])} aud.)" for _, r in por_mes.iterrows()]
+            return "Evolución mensual en el filtro actual: " + " | ".join(items) + "."
+
+    if any(k in q for k in ["crítico", "critico", "mejora", "criterio", "falla", "desvío", "desvio"]):
+        if not ejes.empty:
+            top_e = ejes.head(3)
+            items = [f"<b>{r['Criterio']}</b> ({r['Estado']}: {r['% Positivo']} positivo / {r['% Crítico']} crítico)" for _, r in top_e.iterrows()]
+            return "Criterios más relevantes en los datos filtrados: " + "; ".join(items) + "."
+
+    if any(k in q for k in ["cuántas", "cuantas", "cantidad", "total", "auditorías", "auditorias", "promedio"]):
+        lista_c = ", ".join([f"{r['Campaña']} ({fmt_pct(r['Promedio'])}, {int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
+        return (
+            f"En el filtro actual hay <b>{total_aud}</b> auditorías con un promedio general de <b>{prom_gral}</b>. "
+            f"Detalle por campaña: {lista_c}."
+        )
+
+    resumen_c = " | ".join([f"<b>{r['Campaña']}</b>: {fmt_pct(r['Promedio'])} ({int(r['Auditorias'])} aud.)" for _, r in por_camp.iterrows()])
+    return (
+        f"Promedio general de <b>{prom_gral}</b> sobre <b>{total_aud}</b> auditorías. "
+        f"Por campaña: {resumen_c}. "
+        f"<i>(Tip: configurá <code>GEMINI_API_KEY</code> para respuestas abiertas con Gemini sobre todo el resumen.)</i>"
+    )
+
+
+def consultar_ia_sobre_empresa(pregunta, base_emp):
+    api_key = obtener_api_key_gemini()
+    if api_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            contexto = construir_contexto_empresa_para_ia(base_emp)
+            prompt = (
+                "Sos un analista de Calidad y Capacitación de Contactel. "
+                "Respondé en español, claro, conciso y basado únicamente en los datos proporcionados.\n\n"
+                f"DATOS DE LA VISTA EMPRESA:\n{contexto}\n\n"
+                f"PREGUNTA DEL USUARIO:\n{pregunta}"
+            )
+            resp = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            texto_ia = getattr(resp, "text", None)
+            if texto_ia and texto_ia.strip():
+                return texto_ia.strip().replace("\n", "<br>")
+        except Exception as err:
+            base_local = responder_consulta_empresa_local(pregunta, base_emp)
+            return f"{base_local}<br><small>Nota: no se pudo conectar con Gemini ({err}).</small>"
+
+    return responder_consulta_empresa_local(pregunta, base_emp)
+
+
 def construir_deduccion_analitica_html(datos, contexto_label):
     if datos.empty:
         return (
@@ -2185,6 +2374,34 @@ else:
 
     st.markdown("### Cuadro de auditorías y puntuación por campaña")
     render_cuadros_por_periodo_html(base_emp, e_camps_sel)
+
+    # Cuadro de consulta a la IA sobre los datos de Vista empresa
+    st.markdown(
+        '<div class="ia-empresa-box">'
+        '<div class="ia-empresa-titulo">Consultá a la IA sobre estos datos de empresa</div>'
+        '<div>Hacé una pregunta sobre campañas, meses, promedios, volumen de auditorías o criterios evaluados en la selección actual.</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    pregunta_ia = st.text_input(
+        "Escribí tu pregunta para la IA:",
+        placeholder="Ej.: ¿Cuál campaña tiene menor calidad y cómo evolucionaron los meses?",
+        key="ia_empresa_input"
+    )
+    if st.button("Preguntar a la IA", key="btn_ia_empresa"):
+        if pregunta_ia and pregunta_ia.strip():
+            with st.spinner("Analizando los datos de la empresa..."):
+                st.session_state["ia_empresa_ultima_respuesta"] = consultar_ia_sobre_empresa(
+                    pregunta_ia.strip(), base_emp
+                )
+        else:
+            st.warning("Escribí una pregunta antes de consultar.")
+
+    if st.session_state.get("ia_empresa_ultima_respuesta"):
+        st.markdown(
+            f'<div class="ia-respuesta-card">{st.session_state["ia_empresa_ultima_respuesta"]}</div>',
+            unsafe_allow_html=True
+        )
 
     st.markdown(construir_deduccion_analitica_html(base_emp, "Vista por empresa"), unsafe_allow_html=True)
 
