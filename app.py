@@ -29,7 +29,7 @@ st.title("Calidad y Capacitación")
 st.caption("Panel de seguimiento de desempeño | Contactel")
 
 # =====================================================
-# FUENTE DE DATOS
+# FUENTES DE DATOS
 # =====================================================
 
 URL_MEDICION = (
@@ -91,12 +91,62 @@ CRITERIOS = [
     "Tuteo al cliente/Cortesía"
 ]
 
-# La columna K no tiene ponderación.
 CRITERIOS_PONDERADOS = list(PONDERACIONES.keys())
 
 # =====================================================
 # FUNCIONES
 # =====================================================
+
+def convertir_puntaje(valor):
+    try:
+        numero = float(
+            str(valor).replace("%", "").replace(",", ".").strip()
+        )
+        if numero <= 1:
+            numero *= 100
+        return numero
+    except (ValueError, TypeError):
+        return None
+
+
+def normalizar_tipo(valor):
+    texto = str(valor).strip().lower()
+
+    if "no venta" in texto:
+        return "No Venta"
+
+    if "venta" in texto:
+        return "Venta"
+
+    return None
+
+
+def calcular_puntaje(fila):
+    tipo = normalizar_tipo(fila["Tipo de gestión"])
+
+    if tipo is None:
+        return None
+
+    indice = 0 if tipo == "Venta" else 1
+    obtenido = 0
+    posible = 0
+
+    for criterio, pesos in PONDERACIONES.items():
+        peso = pesos[indice]
+        respuesta = str(fila[criterio]).strip().lower()
+
+        posible += peso
+
+        if respuesta in ["si", "n/a"]:
+            obtenido += peso
+        elif respuesta == "punto de mejora":
+            obtenido += peso / 2
+
+    if posible == 0:
+        return None
+
+    return obtenido / posible * 100
+
 
 @st.cache_data(ttl=300)
 def leer_mediciones():
@@ -107,8 +157,10 @@ def leer_mediciones():
         keep_default_na=False
     )
 
-    # Los registros empiezan en la fila 10.
-    # A:AG. Se excluye AC (Acción).
+    # Los registros comienzan en la fila 10.
+    # Se toman las columnas A:AG.
+    # La columna AC (Acción) se elimina del análisis.
+
     datos = bruto.iloc[9:, :33].copy()
 
     datos.columns = [
@@ -139,10 +191,13 @@ def leer_mediciones():
         errors="coerce"
     )
 
-    datos["Puntaje oficial"] = datos["Puntaje"].apply(convertir_puntaje)
+    datos["Puntaje oficial"] = datos["Puntaje"].apply(
+        convertir_puntaje
+    )
 
     datos["Puntaje calculado"] = datos.apply(
-        calcular_puntaje, axis=1
+        calcular_puntaje,
+        axis=1
     )
 
     datos["Puntaje final"] = datos["Puntaje oficial"].fillna(
@@ -154,56 +209,6 @@ def leer_mediciones():
     )
 
     return datos
-
-
-def convertir_puntaje(valor):
-    try:
-        numero = float(
-            str(valor).replace("%", "").replace(",", ".").strip()
-        )
-        if numero <= 1:
-            numero *= 100
-        return numero
-    except:
-        return None
-
-
-def normalizar_tipo(valor):
-    texto = str(valor).strip().lower()
-
-    if "no venta" in texto:
-        return "No Venta"
-    if "venta" in texto:
-        return "Venta"
-
-    return None
-
-
-def calcular_puntaje(fila):
-    tipo = normalizar_tipo(fila["Tipo de gestión"])
-
-    if tipo is None:
-        return None
-
-    indice = 0 if tipo == "Venta" else 1
-    obtenido = 0
-    posible = 0
-
-    for criterio, pesos in PONDERACIONES.items():
-        peso = pesos[indice]
-        respuesta = str(fila[criterio]).strip().lower()
-
-        posible += peso
-
-        if respuesta == "si" or respuesta == "n/a":
-            obtenido += peso
-        elif respuesta == "punto de mejora":
-            obtenido += peso / 2
-
-    if posible == 0:
-        return None
-
-    return obtenido / posible * 100
 
 
 def construir_detalle_criterios(datos):
@@ -227,9 +232,11 @@ def construir_detalle_criterios(datos):
             if respuesta == "no":
                 descuento = peso
                 puntos_obtenidos = 0
+
             elif respuesta == "punto de mejora":
                 descuento = peso / 2
                 puntos_obtenidos = peso / 2
+
             else:
                 descuento = 0
                 puntos_obtenidos = peso
@@ -270,6 +277,7 @@ if df.empty:
     st.warning("No hay auditorías para mostrar.")
     st.stop()
 
+
 # =====================================================
 # FILTROS GENERALES
 # =====================================================
@@ -280,6 +288,7 @@ c1, c2, c3 = st.columns(3)
 
 with c1:
     opciones_campaña = sorted(df["Campaña"].unique())
+
     campañas = st.multiselect(
         "Campaña",
         opciones_campaña,
@@ -297,9 +306,7 @@ with c2:
     )
 
 with c3:
-    base_tipos = df[
-        df["Campaña"].isin(campañas)
-    ]
+    base_tipos = df[df["Campaña"].isin(campañas)]
 
     opciones_tipificacion = sorted(
         base_tipos["Tipificación"].dropna().unique()
@@ -314,15 +321,24 @@ with c3:
 fechas = df["Fecha"].dropna()
 
 if not fechas.empty:
-    fecha_inicio, fecha_fin = st.date_input(
+    periodo = st.date_input(
         "Período",
         value=(fechas.min().date(), fechas.max().date()),
         min_value=fechas.min().date(),
         max_value=fechas.max().date(),
         format="DD/MM/YYYY"
     )
+
+    if isinstance(periodo, (tuple, list)):
+        fecha_inicio = periodo[0]
+        fecha_fin = periodo[-1]
+    else:
+        fecha_inicio = periodo
+        fecha_fin = periodo
+
 else:
     fecha_inicio, fecha_fin = None, None
+
 
 filtrado = df[
     df["Campaña"].isin(campañas) &
@@ -332,7 +348,10 @@ filtrado = df[
 
 if fecha_inicio and fecha_fin:
     filtrado = filtrado[
-        filtrado["Fecha"].dt.date.between(fecha_inicio, fecha_fin)
+        filtrado["Fecha"].dt.date.between(
+            fecha_inicio,
+            fecha_fin
+        )
     ]
 
 if filtrado.empty:
@@ -340,6 +359,7 @@ if filtrado.empty:
     st.stop()
 
 detalle_filtrado = construir_detalle_criterios(filtrado)
+
 
 # =====================================================
 # INDICADORES PRINCIPALES
@@ -353,6 +373,7 @@ k1, k2, k3, k4 = st.columns(4)
 k1.metric("Auditorías", len(filtrado))
 
 promedio = filtrado["Puntaje final"].mean()
+
 k2.metric(
     "Calidad promedio",
     f"{promedio:.1f}%" if pd.notna(promedio) else "Sin datos"
@@ -360,6 +381,7 @@ k2.metric(
 
 k3.metric("Asesores", filtrado["Asesor"].nunique())
 k4.metric("Campañas", filtrado["Campaña"].nunique())
+
 
 # =====================================================
 # PESTAÑAS
@@ -373,11 +395,13 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Detalle de auditorías"
 ])
 
+
 # =====================================================
-# RESUMEN
+# 1. RESUMEN
 # =====================================================
 
 with tab1:
+
     st.subheader("Evolución de calidad")
 
     evolucion = filtrado.dropna(subset=["Fecha"]).copy()
@@ -389,6 +413,7 @@ with tab1:
             .reset_index()
             .set_index("Fecha")
         )
+
         st.line_chart(evolucion)
 
     st.subheader("Resultados por asesor")
@@ -402,7 +427,12 @@ with tab1:
     tabla = tabla.sort_values("Calidad", ascending=False)
 
     st.bar_chart(tabla.set_index("Asesor")["Calidad"])
-    st.dataframe(tabla, use_container_width=True, hide_index=True)
+
+    st.dataframe(
+        tabla,
+        use_container_width=True,
+        hide_index=True
+    )
 
     st.subheader("Resultados por tipo de gestión")
 
@@ -412,14 +442,20 @@ with tab1:
     ).reset_index()
 
     por_tipo["Calidad"] = por_tipo["Calidad"].round(1)
-    st.dataframe(por_tipo, use_container_width=True, hide_index=True)
+
+    st.dataframe(
+        por_tipo,
+        use_container_width=True,
+        hide_index=True
+    )
 
 
 # =====================================================
-# ANÁLISIS INDIVIDUAL
+# 2. ANÁLISIS INDIVIDUAL
 # =====================================================
 
 with tab2:
+
     st.subheader("Análisis individual del asesor")
 
     asesor = st.selectbox(
@@ -437,11 +473,13 @@ with tab2:
     ].copy()
 
     # Indicadores individuales
+
     a1, a2, a3, a4 = st.columns(4)
 
     promedio_individual = individual["Puntaje final"].mean()
 
     a1.metric("Auditorías", len(individual))
+
     a2.metric(
         "Calidad promedio",
         f"{promedio_individual:.1f}%"
@@ -460,10 +498,12 @@ with tab2:
 
     st.divider()
 
-    # Descuentos por criterio
+    # 1. Descuentos por criterio
+
     st.markdown("### 1. Descuentos por criterio")
 
     if not criterios_individual.empty:
+
         descuentos = criterios_individual.groupby("Criterio").agg(
             Descuento=("Descuento", "sum"),
             Evaluaciones=("Respuesta", "count"),
@@ -472,7 +512,8 @@ with tab2:
         ).reset_index()
 
         descuentos = descuentos.sort_values(
-            "Descuento", ascending=False
+            "Descuento",
+            ascending=False
         )
 
         st.bar_chart(
@@ -490,10 +531,12 @@ with tab2:
 
     st.divider()
 
-    # Reincidencias
+    # 2. Reincidencias
+
     st.markdown("### 2. Reincidencias")
 
     if not criterios_individual.empty:
+
         reincidencias = criterios_individual[
             criterios_individual["Respuesta"].isin(
                 ["no", "punto de mejora"]
@@ -509,7 +552,8 @@ with tab2:
             reincidencias["punto de mejora"] = 0
 
         reincidencias["Total de apariciones"] = (
-            reincidencias["no"] + reincidencias["punto de mejora"]
+            reincidencias["no"] +
+            reincidencias["punto de mejora"]
         )
 
         reincidencias = reincidencias.sort_values(
@@ -535,10 +579,12 @@ with tab2:
 
     st.divider()
 
-    # Fortalezas
+    # 3. Fortalezas individuales
+
     st.markdown("### 3. Fortalezas individuales")
 
     if not criterios_individual.empty:
+
         fortalezas = criterios_individual.groupby("Criterio").agg(
             Evaluaciones=("Respuesta", "count"),
             Cumplimientos=("Respuesta", lambda x: (x == "si").sum()),
@@ -563,12 +609,14 @@ with tab2:
 
     st.divider()
 
-    # Evolución mensual
+    # 4. Evolución mensual de calidad
+
     st.markdown("### 4. Evolución mensual de calidad")
 
     mensual = individual.dropna(subset=["Fecha"]).copy()
 
     if not mensual.empty:
+
         mensual["Mes"] = mensual["Fecha"].dt.to_period("M").astype(str)
 
         evolucion_mensual = mensual.groupby("Mes").agg(
@@ -576,7 +624,9 @@ with tab2:
             Calidad=("Puntaje final", "mean")
         ).reset_index()
 
-        evolucion_mensual["Calidad"] = evolucion_mensual["Calidad"].round(1)
+        evolucion_mensual["Calidad"] = (
+            evolucion_mensual["Calidad"].round(1)
+        )
 
         st.line_chart(
             evolucion_mensual.set_index("Mes")["Calidad"]
@@ -590,10 +640,12 @@ with tab2:
 
     st.divider()
 
-    # Evolución por criterio
+    # 5. Evolución de cada criterio
+
     st.markdown("### 5. Evolución de cada criterio")
 
     if not criterios_individual.empty:
+
         evolucion_criterios = criterios_individual[
             criterios_individual["Mes"] != ""
         ].copy()
@@ -611,6 +663,7 @@ with tab2:
         )
 
         if not tabla_evolucion.empty:
+
             st.line_chart(tabla_evolucion)
 
             criterio_elegido = st.selectbox(
@@ -623,14 +676,14 @@ with tab2:
                 evolucion_criterios["Criterio"] == criterio_elegido
             ]
 
-         evolucion_un_criterio = detalle_criterio.groupby("Mes").agg(
-    porcentaje_obtenido=("% obtenido", "mean"),
-    Evaluaciones=("Respuesta", "count")
-).reset_index()
+            evolucion_un_criterio = detalle_criterio.groupby("Mes").agg(
+                porcentaje_obtenido=("% obtenido", "mean"),
+                Evaluaciones=("Respuesta", "count")
+            ).reset_index()
 
-evolucion_un_criterio = evolucion_un_criterio.rename(
-    columns={"porcentaje_obtenido": "% obtenido"}
-)
+            evolucion_un_criterio = evolucion_un_criterio.rename(
+                columns={"porcentaje_obtenido": "% obtenido"}
+            )
 
             evolucion_un_criterio["% obtenido"] = (
                 evolucion_un_criterio["% obtenido"].round(1)
@@ -648,7 +701,8 @@ evolucion_un_criterio = evolucion_un_criterio.rename(
 
     st.divider()
 
-    # Historial de auditorías del asesor
+    # 6. Historial de auditorías
+
     st.markdown("### 6. Historial de auditorías")
 
     columnas_historial = [
@@ -658,6 +712,7 @@ evolucion_un_criterio = evolucion_un_criterio.rename(
     ]
 
     historial = individual[columnas_historial].copy()
+
     historial["Fecha"] = historial["Fecha"].dt.strftime("%d/%m/%Y")
     historial["Puntaje final"] = historial["Puntaje final"].round(1)
 
@@ -669,10 +724,11 @@ evolucion_un_criterio = evolucion_un_criterio.rename(
 
 
 # =====================================================
-# POR CAMPAÑA
+# 3. POR CAMPAÑA
 # =====================================================
 
 with tab3:
+
     st.subheader("Desempeño por campaña")
 
     campañas_resumen = filtrado.groupby("Campaña").agg(
@@ -681,7 +737,9 @@ with tab3:
         Calidad=("Puntaje final", "mean")
     ).reset_index()
 
-    campañas_resumen["Calidad"] = campañas_resumen["Calidad"].round(1)
+    campañas_resumen["Calidad"] = (
+        campañas_resumen["Calidad"].round(1)
+    )
 
     st.bar_chart(
         campañas_resumen.set_index("Campaña")["Calidad"]
@@ -698,6 +756,7 @@ with tab3:
     base = filtrado.dropna(subset=["Fecha"]).copy()
 
     if not base.empty:
+
         base["Mes"] = base["Fecha"].dt.to_period("M").astype(str)
 
         evolucion_campañas = base.pivot_table(
@@ -711,13 +770,15 @@ with tab3:
 
 
 # =====================================================
-# CRITERIOS GENERALES
+# 4. CRITERIOS GENERALES
 # =====================================================
 
 with tab4:
+
     st.subheader("Análisis general de criterios")
 
     if not detalle_filtrado.empty:
+
         resumen = detalle_filtrado.groupby("Criterio").agg(
             Evaluaciones=("Respuesta", "count"),
             SI=("Respuesta", lambda x: (x == "si").sum()),
@@ -733,13 +794,15 @@ with tab4:
         )
 
         resumen["% incumplimiento"] = (
-            resumen["NO"] / resumen["Evaluaciones"] * 100
+            resumen["NO"] /
+            resumen["Evaluaciones"] * 100
         )
 
         st.markdown("**Criterios con mayor descuento acumulado**")
 
         mayores_descuentos = resumen.sort_values(
-            "Descuento", ascending=False
+            "Descuento",
+            ascending=False
         )
 
         st.bar_chart(
@@ -760,10 +823,11 @@ with tab4:
 
 
 # =====================================================
-# DETALLE DE AUDITORÍAS
+# 5. DETALLE DE AUDITORÍAS
 # =====================================================
 
 with tab5:
+
     st.subheader("Detalle de auditorías")
 
     columnas = [
@@ -775,6 +839,7 @@ with tab5:
     ]
 
     detalle = filtrado[columnas].copy()
+
     detalle["Fecha"] = detalle["Fecha"].dt.strftime("%d/%m/%Y")
     detalle["Puntaje final"] = detalle["Puntaje final"].round(1)
 
