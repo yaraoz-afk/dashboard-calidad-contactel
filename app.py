@@ -3,45 +3,49 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(
-    page_title="Diagnóstico de estructura",
+    page_title="Encabezados - Contactel",
     layout="wide"
 )
 
-URLS = {
-    "Medición": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/pub?gid=0&single=true&output=csv",
-    "Medición por asesor": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/pub?gid=846850309&single=true&output=csv",
-    "Histórico por campaña": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/pub?gid=1211851562&single=true&output=csv",
-    "Hoja 2": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/pub?gid=1421200336&single=true&output=csv"
-}
+URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/pub?gid=0&single=true&output=csv"
 
 @st.cache_data(ttl=300)
-def cargar_datos(url):
+def cargar_datos():
     return pd.read_csv(
-        url,
+        URL,
         header=None,
         dtype=str,
         keep_default_na=False
     )
 
-st.title("CONTACTEL | Estructura de datos")
-st.caption("Vista de las primeras filas para identificar encabezados.")
+st.title("CONTACTEL | Encabezados de medición")
+st.write("Identificación de las columnas de la hoja Medición.")
 
-for nombre, url in URLS.items():
-    st.divider()
-    st.subheader(nombre)
+try:
+    df = cargar_datos()
 
-    try:
-        df = cargar_datos(url)
+    columnas = []
 
-        st.write(f"Filas totales: {len(df)}")
-        st.write(f"Columnas totales: {len(df.columns)}")
+    for i in range(len(df.columns)):
+        letra = ""
+        n = i + 1
 
-        st.write("**Primeras 6 filas:**")
-        st.dataframe(
-            df.head(6),
-            use_container_width=True,
-            hide_index=True
+        while n:
+            n, resto = divmod(n - 1, 26)
+            letra = chr(65 + resto) + letra
+
+        fila1 = df.iloc[0, i].strip()
+        fila2 = df.iloc[1, i].strip()
+
+        columnas.append(
+            f"Columna {letra} | Fila 1: {fila1 or '[vacío]'} | Fila 2: {fila2 or '[vacío]'}"
         )
 
-    except Exception as e:
-        st.error(f"Error al leer la pestaña: {e}")
+    resultado = "\n".join(columnas)
+
+    st.success("Encabezados identificados correctamente.")
+    st.caption("Podés seleccionar y copiar el texto de abajo.")
+    st.code(resultado, language="text")
+
+except Exception as e:
+    st.error(f"No se pudo leer la información: {e}")
