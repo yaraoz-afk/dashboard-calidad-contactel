@@ -623,10 +623,14 @@ with tab2:
                 evolucion_criterios["Criterio"] == criterio_elegido
             ]
 
-            evolucion_un_criterio = detalle_criterio.groupby("Mes").agg(
-                "% obtenido"=("% obtenido", "mean"),
-                Evaluaciones=("Respuesta", "count")
-            ).reset_index()
+         evolucion_un_criterio = detalle_criterio.groupby("Mes").agg(
+    porcentaje_obtenido=("% obtenido", "mean"),
+    Evaluaciones=("Respuesta", "count")
+).reset_index()
+
+evolucion_un_criterio = evolucion_un_criterio.rename(
+    columns={"porcentaje_obtenido": "% obtenido"}
+)
 
             evolucion_un_criterio["% obtenido"] = (
                 evolucion_un_criterio["% obtenido"].round(1)
