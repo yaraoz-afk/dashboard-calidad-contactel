@@ -12,11 +12,11 @@ st.set_page_config(
     layout="wide"
 )
 
-VERDE_PRINCIPAL = "#30b44e"
-VERDE_OSCURO = "#1e7e34"
+VERDE_PRINCIPAL = "#2e8b57"
+VERDE_OSCURO = "#1f5c3b"
 GRIS_DESPLEGABLE = "#f1f5f9"
-GRIS_HOVER = "#dcfce7"
-ROJO_CRITICO = "#dc2626"
+GRIS_HOVER = "#e6f2ec"
+ROJO_CRITICO = "#b91c1c"
 
 MESES_ES = {
     1: "Enero",
@@ -68,34 +68,34 @@ MAPA_MES_TEXTO = {
 st.markdown(f"""
 <style>
 .stApp {{
-    background-color: #f4f9f5;
-    color: #000000;
+    background-color: #f6f8f7;
+    color: #0f172a;
 }}
 section[data-testid="stSidebar"] {{
-    background-color: #e9f3ec;
-    border-right: 1px solid #b7e1c1;
+    background-color: #eef2f0;
+    border-right: 1px solid #cbd5e1;
 }}
 h1, h2, h3, h4, p, label, span, div, .stMarkdown {{
-    color: #000000;
+    color: #0f172a;
 }}
 h1, h2 {{
-    color: #14532d !important;
+    color: #1e293b !important;
 }}
 
 /* Tarjetas de métricas */
 div[data-testid="stMetric"] {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-top: 4px solid {VERDE_PRINCIPAL};
+    border-top: 3px solid {VERDE_PRINCIPAL};
     padding: 12px 14px;
     border-radius: 8px;
 }}
 div[data-testid="stMetric"] label {{
-    color: #1f2937 !important;
+    color: #334155 !important;
     font-weight: 600;
 }}
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
-    color: #000000 !important;
+    color: #0f172a !important;
     font-weight: 700;
 }}
 
@@ -105,8 +105,8 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
 [data-testid="stMultiSelect"] [data-baseweb="select"],
 [data-testid="stMultiSelect"] [data-baseweb="select"] > div {{
     background-color: {GRIS_DESPLEGABLE} !important;
-    color: #000000 !important;
-    border-color: #64748b !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
     border-radius: 6px !important;
     min-height: 44px !important;
     height: auto !important;
@@ -126,11 +126,11 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
 }}
 
 [data-testid="stMultiSelect"] input {{
-    color: #000000 !important;
+    color: #0f172a !important;
     min-width: 70px !important;
 }}
 
-/* Tags seleccionados en verde #30b44e con texto e 'x' en blanco */
+/* Tags seleccionados */
 [data-testid="stMultiSelect"] [data-baseweb="tag"],
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:hover,
 [data-testid="stMultiSelect"] [data-baseweb="tag"]:focus,
@@ -178,7 +178,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
     flex-shrink: 0 !important;
 }}
 
-/* Controles derechos del multiselect ('x' limpiar todo y flechita desplegable) */
+/* Controles derechos del multiselect */
 [data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:last-child {{
     display: flex !important;
     align-items: center !important;
@@ -213,13 +213,13 @@ div[role="listbox"],
 div[role="listbox"] > div,
 [role="option"] {{
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
 }}
 ul[role="listbox"] > li:hover,
 [role="option"]:hover,
 [aria-selected="true"] {{
     background-color: {GRIS_HOVER} !important;
-    color: #000000 !important;
+    color: #0f172a !important;
 }}
 div[data-baseweb="popover"] span,
 div[data-baseweb="popover"] div,
@@ -228,10 +228,10 @@ ul[role="listbox"] span,
 ul[role="listbox"] div,
 [role="option"] span,
 [role="option"] div {{
-    color: #000000 !important;
+    color: #0f172a !important;
 }}
 
-/* Botones en verde #30b44e */
+/* Botones */
 .stButton > button,
 .stDownloadButton > button {{
     background-color: {VERDE_PRINCIPAL} !important;
@@ -250,11 +250,11 @@ ul[role="listbox"] div,
 .card-compacta {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-top: 5px solid #1e3a8a;
-    border-radius: 4px;
+    border-top: 4px solid #475569;
+    border-radius: 6px;
     padding: 12px 14px;
     margin-bottom: 16px;
-    color: #000000;
+    color: #0f172a;
 }}
 .card-titulo {{
     font-size: 15px;
@@ -268,14 +268,14 @@ ul[role="listbox"] div,
     font-size: 11.5px;
     font-weight: 600;
     text-align: center;
-    color: #334155;
+    color: #475569;
     margin-bottom: 10px;
     padding-bottom: 7px;
-    border-bottom: 1px solid #cbd5e1;
+    border-bottom: 1px solid #e2e8f0;
 }}
 .bloque-verde {{
-    background: #eaf7ed;
-    border-left: 4px solid {VERDE_PRINCIPAL};
+    background: #f0fdf4;
+    border-left: 3px solid {VERDE_PRINCIPAL};
     padding: 7px 9px;
     margin-bottom: 7px;
     font-size: 12px;
@@ -283,7 +283,7 @@ ul[role="listbox"] div,
 }}
 .bloque-rojo {{
     background: #fef2f2;
-    border-left: 4px solid {ROJO_CRITICO};
+    border-left: 3px solid {ROJO_CRITICO};
     padding: 7px 9px;
     margin-bottom: 7px;
     font-size: 12px;
@@ -291,7 +291,7 @@ ul[role="listbox"] div,
 }}
 .bloque-naranja {{
     background: #fffbeb;
-    border-left: 4px solid #eab308;
+    border-left: 3px solid #d97706;
     padding: 7px 9px;
     margin-bottom: 7px;
     font-size: 12px;
@@ -305,16 +305,16 @@ ul[role="listbox"] div,
     font-size: 12px;
     line-height: 1.35;
 }}
-.tit-verde {{ color: #15803d; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
-.tit-rojo {{ color: #b91c1c; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
-.tit-naranja {{ color: #b45309; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
-.tit-fb {{ color: #0f172a; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-verde {{ color: #166534; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-rojo {{ color: #991b1b; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-naranja {{ color: #92400e; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-fb {{ color: #1e293b; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 
-/* Matriz Mes x Campaña estilo planilla */
+/* Matriz Mes x Campaña */
 .matriz-emp-titulo {{
     font-size: 15px;
     font-weight: 800;
-    color: #0f172a;
+    color: #1e293b;
     margin-top: 8px;
     margin-bottom: 8px;
     text-transform: uppercase;
@@ -323,7 +323,7 @@ ul[role="listbox"] div,
     width: 100%;
     overflow-x: auto;
     background: #ffffff;
-    border: 1px solid #94a3b8;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
     margin-bottom: 18px;
 }}
@@ -332,46 +332,46 @@ table.matriz-emp {{
     table-layout: fixed;
     border-collapse: collapse;
     font-size: 11.5px;
-    color: #000000;
+    color: #0f172a;
 }}
 table.matriz-emp th.th-mes {{
-    background-color: #ffffff;
-    color: #000000;
+    background-color: #f1f5f9;
+    color: #0f172a;
     font-weight: 800;
     text-align: left;
     padding: 7px 6px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     width: 96px;
     white-space: nowrap;
 }}
 table.matriz-emp th.th-camp {{
-    background-color: #16a34a;
-    color: #ffffff;
+    background-color: #e2e8f0;
+    color: #0f172a;
     font-weight: 700;
     text-align: center;
     padding: 6px 4px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     white-space: normal;
     line-height: 1.15;
     overflow-wrap: break-word;
 }}
 table.matriz-emp th.th-prom {{
-    background-color: #52525b;
-    color: #ffffff;
+    background-color: #cbd5e1;
+    color: #0f172a;
     font-weight: 800;
     text-align: center;
     padding: 6px 5px;
-    border: 1px solid #64748b;
+    border: 1px solid #94a3b8;
     width: 88px;
     white-space: normal;
     line-height: 1.15;
 }}
 table.matriz-emp td {{
     padding: 6px 4px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     text-align: center;
     vertical-align: middle;
-    color: #000000;
+    color: #0f172a;
     font-weight: 600;
     font-size: 11px;
     white-space: nowrap;
@@ -386,16 +386,16 @@ table.matriz-emp td.td-mes {{
     padding-left: 6px;
 }}
 table.matriz-emp td.td-prom-fila {{
-    background-color: #f4f4f5;
+    background-color: #f8fafc;
     font-weight: 800;
 }}
 table.matriz-emp tr.fila-total-camp td {{
     font-weight: 800;
-    border-top: 2px solid #334155;
+    border-top: 2px solid #94a3b8;
 }}
 table.matriz-emp tr.fila-total-camp td.td-etq-total {{
-    background-color: #9ca3af;
-    color: #000000;
+    background-color: #e2e8f0;
+    color: #0f172a;
     text-align: center;
     white-space: normal;
     line-height: 1.15;
@@ -410,8 +410,8 @@ table.matriz-emp tr.fila-total-camp td.td-vacio-final {{
     width: 100%;
     overflow-x: auto;
     background: #ffffff;
-    border: 1px solid #64748b;
-    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     margin-bottom: 18px;
 }}
 table.resumen-per {{
@@ -421,79 +421,79 @@ table.resumen-per {{
     font-size: 12.5px;
 }}
 table.resumen-per th.th-per-grupo {{
-    background-color: #bfbfbf;
-    color: #000000;
+    background-color: #e2e8f0;
+    color: #0f172a;
     font-weight: 800;
     text-align: center;
     padding: 7px 10px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     font-size: 13px;
     white-space: nowrap;
 }}
 table.resumen-per th.th-per-camp-hdr {{
-    background-color: #2ea043;
-    color: #ffffff;
-    font-weight: 700;
+    background-color: #cbd5e1;
+    color: #0f172a;
+    font-weight: 800;
     text-align: left;
     padding: 7px 12px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     min-width: 190px;
     white-space: nowrap;
 }}
 table.resumen-per th.th-per-col {{
-    background-color: #2ea043;
-    color: #ffffff;
+    background-color: #f1f5f9;
+    color: #0f172a;
     font-weight: 700;
     text-align: center;
     padding: 7px 10px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     min-width: 105px;
     white-space: nowrap;
     line-height: 1.15;
 }}
 table.resumen-per td.td-per-camp {{
-    background-color: #595959;
-    color: #ffffff;
+    background-color: #f8fafc;
+    color: #0f172a;
     font-weight: 700;
     text-align: left;
     padding: 6px 12px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     white-space: nowrap;
 }}
 table.resumen-per td.td-per-q {{
     background-color: #ffffff;
-    color: #000000;
+    color: #0f172a;
     font-weight: 600;
     text-align: center;
     padding: 6px 10px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     white-space: nowrap;
 }}
 table.resumen-per td.td-per-sin-aud {{
-    background-color: #d1d5db;
-    color: #374151;
+    background-color: #e2e8f0;
+    color: #475569;
     font-weight: 600;
     text-align: center;
     padding: 6px 10px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     white-space: nowrap;
 }}
 table.resumen-per td.td-per-prom {{
     background-color: #ffffff;
-    color: #000000;
+    color: #0f172a;
     font-weight: 600;
     text-align: center;
     padding: 6px 10px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     white-space: nowrap;
 }}
 table.resumen-per tr.fila-per-total td {{
-    background-color: #2ea043;
-    color: #ffffff;
+    background-color: #e2e8f0;
+    color: #0f172a;
     font-weight: 800;
     text-align: center;
     padding: 7px 10px;
-    border: 1px solid #64748b;
+    border: 1px solid #cbd5e1;
     white-space: nowrap;
 }}
 table.resumen-per tr.fila-per-total td.td-per-total-etq {{
@@ -501,11 +501,11 @@ table.resumen-per tr.fila-per-total td.td-per-total-etq {{
     padding-left: 12px;
 }}
 
-/* Cuadro comparativo con nombre legible y focos completos */
+/* Cuadro comparativo */
 .cuadro-comp-titulo {{
     font-size: 15px;
     font-weight: 800;
-    color: #0f172a;
+    color: #1e293b;
     margin-top: 10px;
     margin-bottom: 8px;
     text-transform: uppercase;
@@ -522,15 +522,15 @@ table.tabla-comp {{
     width: 100%;
     border-collapse: collapse;
     font-size: 12.5px;
-    color: #000000;
+    color: #0f172a;
 }}
 table.tabla-comp th {{
-    background-color: #1e3a8a;
-    color: #ffffff;
+    background-color: #e2e8f0;
+    color: #0f172a;
     font-weight: 700;
     text-align: left;
     padding: 9px 10px;
-    border: 1px solid #1e293b;
+    border: 1px solid #cbd5e1;
     white-space: nowrap;
 }}
 table.tabla-comp td {{
@@ -538,7 +538,7 @@ table.tabla-comp td {{
     border: 1px solid #e2e8f0;
     vertical-align: top;
     line-height: 1.35;
-    color: #000000;
+    color: #0f172a;
 }}
 table.tabla-comp td.col-asesor {{
     min-width: 210px;
@@ -555,89 +555,128 @@ table.tabla-comp tr:nth-child(even) td {{
     background-color: #f8fafc;
 }}
 
-/* Tabla Detalle por auditoria estilo planilla / PDF con scroll horizontal */
+/* Tabla Detalle por auditoria: títulos fijos arriba + Asesor fijo a la izquierda */
 .det-aud-wrap {{
     width: 100%;
-    overflow-x: auto;
+    max-height: 70vh;
+    overflow: auto;
     background: #ffffff;
-    border: 1px solid #64748b;
-    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     margin-bottom: 18px;
 }}
 table.det-aud {{
     width: max-content;
     min-width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 11.5px;
-    color: #000000;
+    color: #0f172a;
+}}
+table.det-aud th {{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 2px solid #94a3b8;
+    border-top: 1px solid #cbd5e1;
 }}
 table.det-aud th.th-meta {{
-    background-color: #d9e2ec;
+    background-color: #e2e8f0;
     color: #0f172a;
-    font-weight: 800;
+    font-weight: 700;
     text-align: center;
-    padding: 7px 8px;
-    border: 1px solid #64748b;
+    padding: 8px 9px;
     white-space: nowrap;
 }}
 table.det-aud th.th-item {{
-    background-color: #1e3a8a;
-    color: #ffffff;
+    background-color: #f1f5f9;
+    color: #0f172a;
     font-weight: 700;
     text-align: center;
-    padding: 6px 6px;
-    border: 1px solid #64748b;
+    padding: 7px 6px;
     max-width: 135px;
-    min-width: 85px;
+    min-width: 88px;
     white-space: normal;
     line-height: 1.15;
 }}
 table.det-aud th.th-bloque {{
-    background-color: #15803d;
-    color: #ffffff;
+    background-color: #cbd5e1;
+    color: #0f172a;
     font-weight: 800;
     text-align: center;
-    padding: 6px 6px;
-    border: 1px solid #64748b;
-    min-width: 86px;
+    padding: 7px 7px;
+    min-width: 92px;
     white-space: normal;
     line-height: 1.15;
 }}
+table.det-aud th.th-asesor-fijo {{
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    background-color: #cbd5e1;
+    color: #0f172a;
+    font-weight: 800;
+    text-align: left;
+    padding: 8px 10px;
+    min-width: 185px;
+    white-space: nowrap;
+    border-right: 2px solid #94a3b8;
+    border-bottom: 2px solid #94a3b8;
+}}
+table.det-aud td.td-asesor-fijo {{
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: #f8fafc;
+    color: #0f172a;
+    padding: 7px 10px;
+    border-right: 2px solid #94a3b8;
+    border-bottom: 1px solid #cbd5e1;
+    vertical-align: top;
+    font-weight: 700;
+    white-space: nowrap;
+}}
 table.det-aud td.td-meta {{
     background-color: #ffffff;
-    color: #000000;
-    padding: 6px 8px;
-    border: 1px solid #64748b;
+    color: #0f172a;
+    padding: 7px 9px;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
     vertical-align: top;
     font-weight: 600;
     white-space: nowrap;
 }}
 table.det-aud td.td-texto-largo {{
     background-color: #ffffff;
-    color: #000000;
-    padding: 6px 8px;
-    border: 1px solid #64748b;
+    color: #0f172a;
+    padding: 7px 9px;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
     vertical-align: top;
-    min-width: 220px;
-    max-width: 320px;
+    min-width: 230px;
+    max-width: 340px;
     white-space: normal;
-    line-height: 1.3;
+    line-height: 1.32;
 }}
 table.det-aud td.td-pct {{
     text-align: center;
     vertical-align: middle;
-    padding: 6px 6px;
-    border: 1px solid #64748b;
+    padding: 7px 6px;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
     font-weight: 700;
-    color: #000000;
+    color: #0f172a;
     white-space: nowrap;
 }}
 table.det-aud td.td-bloque {{
     background-color: #f1f5f9;
     text-align: center;
     vertical-align: middle;
-    padding: 6px 6px;
-    border: 1px solid #64748b;
+    padding: 7px 7px;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
     font-weight: 800;
     color: #0f172a;
     white-space: nowrap;
@@ -647,39 +686,39 @@ table.det-aud td.td-bloque {{
 .deduccion-box {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-left: 6px solid {VERDE_OSCURO};
+    border-left: 4px solid {VERDE_PRINCIPAL};
     border-radius: 8px;
     padding: 16px 18px;
     margin-top: 12px;
     margin-bottom: 16px;
-    color: #000000;
+    color: #0f172a;
     font-size: 13px;
     line-height: 1.45;
 }}
 .deduccion-titulo {{
     font-size: 14.5px;
     font-weight: 800;
-    color: #14532d;
+    color: #1e293b;
     margin-bottom: 10px;
     text-transform: uppercase;
 }}
 .ded-pos {{
-    background: #eaf7ed;
-    border-left: 4px solid {VERDE_PRINCIPAL};
+    background: #f0fdf4;
+    border-left: 3px solid {VERDE_PRINCIPAL};
     padding: 8px 11px;
     border-radius: 4px;
     margin-bottom: 8px;
 }}
 .ded-alert {{
     background: #fef2f2;
-    border-left: 4px solid {ROJO_CRITICO};
+    border-left: 3px solid {ROJO_CRITICO};
     padding: 8px 11px;
     border-radius: 4px;
     margin-bottom: 8px;
 }}
 .ded-rec {{
-    background: #f0fdf4;
-    border-left: 4px solid #15803d;
+    background: #f8fafc;
+    border-left: 3px solid #64748b;
     padding: 8px 11px;
     border-radius: 4px;
 }}
@@ -963,13 +1002,13 @@ def fmt_pct_dec(valor):
 
 def color_celda_calidad(valor):
     if pd.isna(valor):
-        return "#9ca3af"
+        return "#e2e8f0"
     v = float(valor)
     if v < 51.0:
-        return "#e6b8af"
+        return "#fecaca"
     if v < 70.0:
-        return "#ffe599"
-    return "#b6d7a8"
+        return "#fef3c7"
+    return "#dcfce7"
 
 
 def convertir_puntaje(valor):
@@ -1128,11 +1167,13 @@ def render_detalle_auditoria_pdf_html(df_det_items):
         st.info("No hay auditorías para mostrar con los filtros seleccionados.")
         return
 
-    meta_cols = ["Asesor", "Fecha", "Campaña", "ID", "Puntaje", "Puntos a trabajar", "Observaciones"]
+    meta_cols = ["Fecha", "Campaña", "ID", "Puntaje", "Puntos a trabajar", "Observaciones"]
     nombres_bloques = {b for b, _ in ESTRUCTURA_BLOQUES_PDF}
 
-    th_html = []
+    th_html = ['<th class="th-asesor-fijo">Asesor</th>']
     for col in df_det_items.columns:
+        if col == "Asesor":
+            continue
         if col in meta_cols:
             th_html.append(f'<th class="th-meta">{col}</th>')
         elif col in nombres_bloques:
@@ -1142,8 +1183,10 @@ def render_detalle_auditoria_pdf_html(df_det_items):
 
     filas_html = []
     for _, r in df_det_items.iterrows():
-        celdas = []
+        celdas = [f'<td class="td-asesor-fijo">{r["Asesor"]}</td>']
         for col in df_det_items.columns:
+            if col == "Asesor":
+                continue
             val = str(r[col])
             if col in ("Puntos a trabajar", "Observaciones"):
                 celdas.append(f'<td class="td-texto-largo">{val}</td>')
@@ -1271,31 +1314,31 @@ def construir_detalle_criterios(datos):
 
 def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False):
     fig.update_layout(
-        title=dict(text=titulo, font=dict(color="#000000", size=18)),
-        font=dict(color="#000000", size=12),
+        title=dict(text=titulo, font=dict(color="#0f172a", size=18)),
+        font=dict(color="#0f172a", size=12),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        legend=dict(font=dict(color="#000000")),
+        legend=dict(font=dict(color="#0f172a")),
         margin=dict(l=20, r=20, t=60, b=35),
         hoverlabel=dict(
             bgcolor="#ffffff",
-            bordercolor="#14532d",
-            font=dict(color="#000000", size=12)
+            bordercolor="#64748b",
+            font=dict(color="#0f172a", size=12)
         )
     )
     fig.update_xaxes(
         title_text=eje_x,
-        color="#000000",
-        title_font=dict(color="#000000"),
-        tickfont=dict(color="#000000"),
-        gridcolor="#d1fae5"
+        color="#0f172a",
+        title_font=dict(color="#0f172a"),
+        tickfont=dict(color="#0f172a"),
+        gridcolor="#e2e8f0"
     )
     fig.update_yaxes(
         title_text=eje_y,
-        color="#000000",
-        title_font=dict(color="#000000"),
-        tickfont=dict(color="#000000"),
-        gridcolor="#d1fae5",
+        color="#0f172a",
+        title_font=dict(color="#0f172a"),
+        tickfont=dict(color="#0f172a"),
+        gridcolor="#e2e8f0",
         ticksuffix="%" if es_porcentaje_y else ""
     )
     return fig
@@ -1336,7 +1379,7 @@ def render_matriz_empresa_html(base_emp):
                 bg = color_celda_calidad(val_c)
                 celdas.append(f'<td style="background-color:{bg};">{fmt_pct_dec(val_c)}</td>')
             else:
-                celdas.append('<td style="background-color:#9ca3af;"></td>')
+                celdas.append('<td style="background-color:#e2e8f0;"></td>')
 
         prom_fila = (sum(vals_fila) / len(vals_fila)) if vals_fila else None
         prom_txt = fmt_pct_dec(prom_fila) if prom_fila is not None else "-"
@@ -1350,7 +1393,7 @@ def render_matriz_empresa_html(base_emp):
             bg_c = color_celda_calidad(val_camp_tot)
             celdas_total.append(f'<td style="background-color:{bg_c};">{fmt_pct_dec(val_camp_tot)}</td>')
         else:
-            celdas_total.append('<td style="background-color:#9ca3af;">-</td>')
+            celdas_total.append('<td style="background-color:#e2e8f0;">-</td>')
     celdas_total.append('<td class="td-vacio-final"></td>')
     filas_html.append(f'<tr class="fila-total-camp">{"".join(celdas_total)}</tr>')
 
