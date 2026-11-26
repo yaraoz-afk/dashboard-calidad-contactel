@@ -361,7 +361,7 @@ if df_con_fecha.empty:
 # =====================================================
 st.subheader("Filtros generales")
 
-f1, f2, f3 = st.columns(3)
+f1, f2 = st.columns(2)
 
 with f1:
     opciones_campaña = sorted(df["Campaña"].dropna().unique())
@@ -376,16 +376,6 @@ with f2:
     asesores = st.multiselect(
         "Asesor", opciones_asesor, default=opciones_asesor,
         key="filtro_asesores"
-    )
-
-with f3:
-    base_tipos = df[df["Campaña"].isin(campañas)] if campañas else df
-    opciones_tipificacion = sorted(
-        x for x in base_tipos["Tipificación"].dropna().unique() if x
-    )
-    tipificaciones = st.multiselect(
-        "Tipificación", opciones_tipificacion,
-        default=opciones_tipificacion, key="filtro_tipificaciones"
     )
 
 p1, p2 = st.columns([1.2, 1.8])
@@ -424,8 +414,7 @@ else:
 
 filtrado = df[
     df["Campaña"].isin(campañas) &
-    df["Asesor"].isin(asesores) &
-    df["Tipificación"].isin(tipificaciones)
+    df["Asesor"].isin(asesores)
 ].copy()
 
 filtrado = filtrado[
