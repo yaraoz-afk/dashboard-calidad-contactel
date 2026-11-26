@@ -761,7 +761,7 @@ def resumen_ejes_criterios(df_crit):
 
 
 def aplicar_filtros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
-                    todos_anios=True, todos_meses=True, todas_camps=True, todos_ases=True):
+                    todos_anios=False, todos_meses=False, todas_camps=False, todos_ases=False):
     out = base_df.copy()
     if anios_sel and not todos_anios:
         out = out[out["Año"].isin(anios_sel)]
@@ -774,6 +774,21 @@ def aplicar_filtros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
         claves_a = {normalizar_clave(a) for a in ases_sel}
         out = out[out["Asesor_key"].isin(claves_a)]
     return out
+
+
+def inicializar_y_limpiar_filtros(defaults_dict):
+    for k, val in defaults_dict.items():
+        if k not in st.session_state:
+            st.session_state[k] = list(val)
+
+
+def cb_limpiar_uno(key_target):
+    st.session_state[key_target] = []
+
+
+def cb_limpiar_todos(defaults_dict):
+    for k, val in defaults_dict.items():
+        st.session_state[k] = list(val)
 
 
 def sintesis_dimension(ejes_df, modo, dimension):
@@ -928,7 +943,6 @@ def construir_deduccion_analitica_html(datos, contexto_label):
     crit_df_all = construir_detalle_criterios(datos)
     ejes = resumen_ejes_criterios(crit_df_all)
 
-    # Buenas energías / puntos positivos
     mejores_ejes = ejes.sort_values(["% Positivo_num", "Evaluaciones"], ascending=[False, False]).head(2) if not ejes.empty else pd.DataFrame()
     top_ases = (
         datos.groupby("Asesor", as_index=False)["Puntaje final"]
@@ -950,7 +964,6 @@ def construir_deduccion_analitica_html(datos, contexto_label):
             f"<b>¡Buen avance!</b> Se analizan <b>{total_aud}</b> auditorías con un promedio general de <b>{prom_gral}</b>.{mejor_ases_txt}"
         )
 
-    # Alertas
     alertas = []
     top_crit = ejes[ejes["Estado"] == "Crítico"] if not ejes.empty else pd.DataFrame()
     top_mej = ejes[ejes["Estado"] == "A mejorar"] if not ejes.empty else pd.DataFrame()
@@ -974,7 +987,6 @@ def construir_deduccion_analitica_html(datos, contexto_label):
 
     alerta_html = "Alerta: " + " | ".join(alertas)
 
-    # Recomendación general
     foco_rec = (
         top_crit.iloc[0]["Criterio"] if not top_crit.empty
         else (top_mej.iloc[0]["Criterio"] if not top_mej.empty else None)
@@ -1033,54 +1045,67 @@ with st.sidebar:
 if seccion == "Vista por asesor":
     st.subheader("Vista por asesor")
 
-    if st.session_state.get("reset_va", False):
-        st.session_state["va_anio"] = años_disp
-        st.session_state["va_mes"] = meses_disp
-        st.session_state["va_camp"] = camp_disp
-        st.session_state["va_ases"] = ases_disp
-        st.session_state["reset_va"] = False
+    defaults_va = {
+        "va_anio": años_disp,
+        "va_mes": meses_disp,
+        "va_camp": camp_disp,
+        "va_ases": ases_disp
+    }
+    inicializar_y_limpiar_filtros(defaults_va)
 
-    f1, f2, f3, f4, f5 = st.columns([1.2, 1.5, 1.8, 1.8, 1.1])
+    c_top_l, c_top_r = st.columns([6, 1.3])
+    with c_top_r:
+        st.button(
+            "Limpiar filtros",
+            key="btn_limpiar_todos_va",
+            on_click=cb_limpiar_todos,
+            args=(defaults_va,),
+            use_container_width=True
+        )
+
+    f1, f2, f3, f4 = st.columns(4)
+
     with f1:
-        a_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="va_anio")
-    with f2:
-        a_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="va_mes")
-    with f3:
-        a_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="va_camp")
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            a_anios_sel = st.multiselect("Año", options=años_disp, key="va_anio")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_va_anio", help="Limpiar filtro Año", on_click=cb_limpiar_uno, args=("va_anio",), use_container_width=True)
 
-    todos_a_camps_pre = (set(a_camps_sel) == set(camp_disp)) if camp_disp else True
-    if a_camps_sel and not todos_a_camps_pre:
-        claves_c_pre = {normalizar_clave(c) for c in a_camps_sel}
-        ases_disp_va = sorted(df[df["Campaña_key"].isin(claves_c_pre)]["Asesor"].dropna().unique())
-        if not ases_disp_va:
-            ases_disp_va = ases_disp
-    else:
-        ases_disp_va = ases_disp
+    with f2:
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            a_meses_sel = st.multiselect("Mes", options=meses_disp, key="va_mes")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_va_mes", help="Limpiar filtro Mes", on_click=cb_limpiar_uno, args=("va_mes",), use_container_width=True)
+
+    with f3:
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            a_camps_sel = st.multiselect("Campaña", options=camp_disp, key="va_camp")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_va_camp", help="Limpiar filtro Campaña", on_click=cb_limpiar_uno, args=("va_camp",), use_container_width=True)
 
     with f4:
-        a_ases_sel = st.multiselect("Asesor", options=ases_disp_va, default=ases_disp_va, key="va_ases")
-    with f5:
-        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-        if st.button("Limpiar filtros", key="btn_limpiar_va", use_container_width=True):
-            st.session_state["reset_va"] = True
-            st.rerun()
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            a_ases_sel = st.multiselect("Asesor", options=ases_disp, key="va_ases")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_va_ases", help="Limpiar filtro Asesor", on_click=cb_limpiar_uno, args=("va_ases",), use_container_width=True)
 
     todos_a_anios = (set(a_anios_sel) == set(años_disp)) if años_disp else True
     todos_a_meses = (set(a_meses_sel) == set(meses_disp)) if meses_disp else True
     todos_a_camps = (set(a_camps_sel) == set(camp_disp)) if camp_disp else True
-    todos_a_ases = (set(a_ases_sel) == set(ases_disp_va)) if ases_disp_va else True
+    todos_a_ases = (set(a_ases_sel) == set(ases_disp)) if ases_disp else True
 
     filtrado_ases = aplicar_filtros(
         df, a_anios_sel, a_meses_sel, a_camps_sel, a_ases_sel,
         todos_a_anios, todos_a_meses, todos_a_camps, todos_a_ases
     )
-
-    if filtrado_ases.empty and a_camps_sel and not todos_a_camps:
-        claves_c = {normalizar_clave(c) for c in a_camps_sel}
-        filtrado_ases = df[df["Campaña_key"].isin(claves_c)].copy()
-        if a_ases_sel and not todos_a_ases:
-            claves_a = {normalizar_clave(a) for a in a_ases_sel}
-            filtrado_ases = filtrado_ases[filtrado_ases["Asesor_key"].isin(claves_a)]
 
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Auditorías", len(filtrado_ases), delta=f"Total Sheet: {len(df)}")
@@ -1164,24 +1189,47 @@ if seccion == "Vista por asesor":
 elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
 
-    if st.session_state.get("reset_ve", False):
-        st.session_state["ve_anio"] = años_disp
-        st.session_state["ve_mes"] = meses_disp
-        st.session_state["ve_camp"] = camp_disp
-        st.session_state["reset_ve"] = False
+    defaults_ve = {
+        "ve_anio": años_disp,
+        "ve_mes": meses_disp,
+        "ve_camp": camp_disp
+    }
+    inicializar_y_limpiar_filtros(defaults_ve)
 
-    fe1, fe2, fe3, fe4 = st.columns([1.3, 1.6, 2.0, 1.1])
+    c_top_l, c_top_r = st.columns([6, 1.3])
+    with c_top_r:
+        st.button(
+            "Limpiar filtros",
+            key="btn_limpiar_todos_ve",
+            on_click=cb_limpiar_todos,
+            args=(defaults_ve,),
+            use_container_width=True
+        )
+
+    fe1, fe2, fe3 = st.columns(3)
     with fe1:
-        e_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="ve_anio")
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            e_anios_sel = st.multiselect("Año", options=años_disp, key="ve_anio")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_ve_anio", help="Limpiar filtro Año", on_click=cb_limpiar_uno, args=("ve_anio",), use_container_width=True)
+
     with fe2:
-        e_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="ve_mes")
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            e_meses_sel = st.multiselect("Mes", options=meses_disp, key="ve_mes")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_ve_mes", help="Limpiar filtro Mes", on_click=cb_limpiar_uno, args=("ve_mes",), use_container_width=True)
+
     with fe3:
-        e_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="ve_camp")
-    with fe4:
-        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-        if st.button("Limpiar filtros", key="btn_limpiar_ve", use_container_width=True):
-            st.session_state["reset_ve"] = True
-            st.rerun()
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            e_camps_sel = st.multiselect("Campaña", options=camp_disp, key="ve_camp")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_ve_camp", help="Limpiar filtro Campaña", on_click=cb_limpiar_uno, args=("ve_camp",), use_container_width=True)
 
     todos_e_anios = (set(e_anios_sel) == set(años_disp)) if años_disp else True
     todos_e_meses = (set(e_meses_sel) == set(meses_disp)) if meses_disp else True
@@ -1241,27 +1289,56 @@ elif seccion == "Vista por empresa":
 else:
     st.subheader("Detalle por auditoria")
 
-    if st.session_state.get("reset_da", False):
-        st.session_state["da_anio"] = años_disp
-        st.session_state["da_mes"] = meses_disp
-        st.session_state["da_camp"] = camp_disp
-        st.session_state["da_ases"] = ases_disp
-        st.session_state["reset_da"] = False
+    defaults_da = {
+        "da_anio": años_disp,
+        "da_mes": meses_disp,
+        "da_camp": camp_disp,
+        "da_ases": ases_disp
+    }
+    inicializar_y_limpiar_filtros(defaults_da)
 
-    fd1, fd2, fd3, fd4, fd5 = st.columns([1.2, 1.5, 1.8, 1.8, 1.1])
+    c_top_l, c_top_r = st.columns([6, 1.3])
+    with c_top_r:
+        st.button(
+            "Limpiar filtros",
+            key="btn_limpiar_todos_da",
+            on_click=cb_limpiar_todos,
+            args=(defaults_da,),
+            use_container_width=True
+        )
+
+    fd1, fd2, fd3, fd4 = st.columns(4)
     with fd1:
-        d_anios_sel = st.multiselect("Año", options=años_disp, default=años_disp, key="da_anio")
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            d_anios_sel = st.multiselect("Año", options=años_disp, key="da_anio")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_da_anio", help="Limpiar filtro Año", on_click=cb_limpiar_uno, args=("da_anio",), use_container_width=True)
+
     with fd2:
-        d_meses_sel = st.multiselect("Mes", options=meses_disp, default=meses_disp, key="da_mes")
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            d_meses_sel = st.multiselect("Mes", options=meses_disp, key="da_mes")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_da_mes", help="Limpiar filtro Mes", on_click=cb_limpiar_uno, args=("da_mes",), use_container_width=True)
+
     with fd3:
-        d_camps_sel = st.multiselect("Campaña", options=camp_disp, default=camp_disp, key="da_camp")
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            d_camps_sel = st.multiselect("Campaña", options=camp_disp, key="da_camp")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_da_camp", help="Limpiar filtro Campaña", on_click=cb_limpiar_uno, args=("da_camp",), use_container_width=True)
+
     with fd4:
-        d_ases_sel = st.multiselect("Asesor", options=ases_disp, default=ases_disp, key="da_ases")
-    with fd5:
-        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-        if st.button("Limpiar filtros", key="btn_limpiar_da", use_container_width=True):
-            st.session_state["reset_da"] = True
-            st.rerun()
+        sub_l, sub_r = st.columns([4.5, 1.2])
+        with sub_l:
+            d_ases_sel = st.multiselect("Asesor", options=ases_disp, key="da_ases")
+        with sub_r:
+            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.button("×", key="clr_da_ases", help="Limpiar filtro Asesor", on_click=cb_limpiar_uno, args=("da_ases",), use_container_width=True)
 
     todos_d_anios = (set(d_anios_sel) == set(años_disp)) if años_disp else True
     todos_d_meses = (set(d_meses_sel) == set(meses_disp)) if meses_disp else True
