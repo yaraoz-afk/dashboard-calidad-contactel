@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(
-    page_title="Diagnóstico - Calidad Contactel",
+    page_title="Diagnóstico de estructura",
     layout="wide"
 )
 
@@ -16,25 +16,32 @@ URLS = {
 
 @st.cache_data(ttl=300)
 def cargar_datos(url):
-    return pd.read_csv(url, sep=None, engine="python")
+    return pd.read_csv(
+        url,
+        header=None,
+        dtype=str,
+        keep_default_na=False
+    )
 
-st.title("CONTACTEL | Diagnóstico de datos")
-st.caption("Verificación de las cuatro fuentes antes de construir el panel.")
+st.title("CONTACTEL | Estructura de datos")
+st.caption("Vista de las primeras filas para identificar encabezados.")
 
 for nombre, url in URLS.items():
+    st.divider()
     st.subheader(nombre)
 
     try:
         df = cargar_datos(url)
-        st.success(f"Conexión correcta: {len(df)} registros y {len(df.columns)} columnas.")
 
-        st.write("**Encabezados detectados:**")
-        st.code("\n".join(str(c) for c in df.columns))
+        st.write(f"Filas totales: {len(df)}")
+        st.write(f"Columnas totales: {len(df.columns)}")
 
-        st.write("**Tipos de datos:**")
-        st.code(df.dtypes.to_string())
+        st.write("**Primeras 6 filas:**")
+        st.dataframe(
+            df.head(6),
+            use_container_width=True,
+            hide_index=True
+        )
 
     except Exception as e:
-        st.error(f"No se pudo leer esta pestaña: {e}")
-
-st.info("Diagnóstico finalizado. No se muestran los registros ni los datos personales.")
+        st.error(f"Error al leer la pestaña: {e}")
