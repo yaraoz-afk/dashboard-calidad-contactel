@@ -50,6 +50,21 @@ MESES_CORTO = {
 
 ORDEN_MESES = {nombre: num for num, nombre in MESES_ES.items()}
 
+MAPA_MES_TEXTO = {
+    "01": "Enero", "1": "Enero", "ene": "Enero", "enero": "Enero",
+    "02": "Febrero", "2": "Febrero", "feb": "Febrero", "febrero": "Febrero",
+    "03": "Marzo", "3": "Marzo", "mar": "Marzo", "marzo": "Marzo",
+    "04": "Abril", "4": "Abril", "abr": "Abril", "abril": "Abril",
+    "05": "Mayo", "5": "Mayo", "may": "Mayo", "mayo": "Mayo",
+    "06": "Junio", "6": "Junio", "jun": "Junio", "junio": "Junio",
+    "07": "Julio", "7": "Julio", "jul": "Julio", "julio": "Julio",
+    "08": "Agosto", "8": "Agosto", "ago": "Agosto", "agosto": "Agosto",
+    "09": "Septiembre", "9": "Septiembre", "sep": "Septiembre", "sept": "Septiembre", "septiembre": "Septiembre",
+    "10": "Octubre", "oct": "Octubre", "octubre": "Octubre",
+    "11": "Noviembre", "nov": "Noviembre", "noviembre": "Noviembre",
+    "12": "Diciembre", "dic": "Diciembre", "diciembre": "Diciembre"
+}
+
 st.markdown(f"""
 <style>
 .stApp {{
@@ -566,35 +581,34 @@ def normalizar_clave_campana(valor):
     return texto
 
 
-def nombre_mes_desde_valor(mes_raw, fecha_dt):
-    if pd.notna(fecha_dt):
-        return MESES_ES.get(int(fecha_dt.month), "Sin mes")
-
+def parsear_mes_texto(mes_raw):
     texto = normalizar_clave(mes_raw)
     if not texto or texto in ("nan", "nat", "sin mes"):
-        return "Sin mes"
+        return None
 
-    mapa_texto = {
-        "01": "Enero", "1": "Enero", "ene": "Enero", "enero": "Enero",
-        "02": "Febrero", "2": "Febrero", "feb": "Febrero", "febrero": "Febrero",
-        "03": "Marzo", "3": "Marzo", "mar": "Marzo", "marzo": "Marzo",
-        "04": "Abril", "4": "Abril", "abr": "Abril", "abril": "Abril",
-        "05": "Mayo", "5": "Mayo", "may": "Mayo", "mayo": "Mayo",
-        "06": "Junio", "6": "Junio", "jun": "Junio", "junio": "Junio",
-        "07": "Julio", "7": "Julio", "jul": "Julio", "julio": "Julio",
-        "08": "Agosto", "8": "Agosto", "ago": "Agosto", "agosto": "Agosto",
-        "09": "Septiembre", "9": "Septiembre", "sep": "Septiembre", "sept": "Septiembre", "septiembre": "Septiembre",
-        "10": "Octubre", "oct": "Octubre", "octubre": "Octubre",
-        "11": "Noviembre", "nov": "Noviembre", "noviembre": "Noviembre",
-        "12": "Diciembre", "dic": "Diciembre", "diciembre": "Diciembre"
-    }
-    if texto in mapa_texto:
-        return mapa_texto[texto]
+    if texto in MAPA_MES_TEXTO:
+        return MAPA_MES_TEXTO[texto]
+
+    # Buscar nombre o abreviatura de mes dentro de textos como "Octubre 2026" o "Oct-26"
+    for clave, nombre_mes in MAPA_MES_TEXTO.items():
+        if re.search(rf"(?<![a-z0-9]){re.escape(clave)}(?![a-z0-9])", texto):
+            return nombre_mes
 
     if len(texto) >= 7 and texto[4] == "-":
         parte_mes = texto[5:7]
-        if parte_mes in mapa_texto:
-            return mapa_texto[parte_mes]
+        if parte_mes in MAPA_MES_TEXTO:
+            return MAPA_MES_TEXTO[parte_mes]
+
+    return None
+
+
+def nombre_mes_desde_valor(mes_raw, fecha_dt):
+    mes_por_raw = parsear_mes_texto(mes_raw)
+    if mes_por_raw:
+        return mes_por_raw
+
+    if pd.notna(fecha_dt):
+        return MESES_ES.get(int(fecha_dt.month), "Sin mes")
 
     return "Sin mes"
 
@@ -651,10 +665,17 @@ def parsear_fecha_segura(serie):
 def extraer_anio_seguro(fecha_dt, mes_raw, fecha_raw):
     if pd.notna(fecha_dt):
         return str(int(fecha_dt.year))
+
     for texto in (str(fecha_raw), str(mes_raw)):
-        for anio_cand in ("2024", "2025", "2026", "2027"):
-            if anio_cand in texto:
-                return anio_cand
+        match_4 = re.search(r"\b(202[4-9])\b", texto)
+        if match_4:
+            return match_4.group(1)
+
+    for texto in (str(fecha_raw), str(mes_raw)):
+        match_2 = re.search(r"(?:^|[/\-])(2[4-9])(?=$|[/\-\s])", texto.strip())
+        if match_2:
+            return f"20{match_2.group(1)}"
+
     return "Sin año"
 
 
