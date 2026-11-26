@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # =====================================================
-# CONFIGURACIÓN GENERAL
+# CONFIGURACIÓN GENERAL Y ESTILOS
 # =====================================================
 st.set_page_config(
     page_title="Calidad y Capacitación | Contactel",
@@ -11,28 +11,167 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
+VERDE_PRINCIPAL = "#30b44e"
+VERDE_OSCURO = "#1e7e34"
+VERDE_SUAVE = "#eaf7ed"
+GRIS_DESPLEGABLE = "#e5e7eb"
+GRIS_HOVER = "#d1d5db"
+ROJO_CRITICO = "#dc2626"
+NARANJA_TRABAJAR = "#ea580c"
+
+st.markdown(f"""
 <style>
-.stApp {background-color:#F5F8F6;}
-h1, h2, h3, h4, p, label, span, div {color:#17211C;}
-div[data-testid="stMetric"] {
-    background:white; border:1px solid #DCE8E1;
-    padding:14px; border-radius:10px;
-}
-div[data-testid="stMetric"] label {color:#26332C !important;}
-div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-    color:#111111 !important;
-}
-.insight-box {
-    background:white;
-    border-left:4px solid #1F6F50;
-    border-top:1px solid #DCE8E1;
-    border-right:1px solid #DCE8E1;
-    border-bottom:1px solid #DCE8E1;
-    padding:14px 16px;
-    border-radius:8px;
-    margin-bottom:10px;
-}
+.stApp {{
+    background-color: #f4f9f5;
+    color: #000000;
+}}
+h1, h2, h3, h4, p, label, span, div, .stMarkdown {{
+    color: #000000;
+}}
+h1, h2 {{
+    color: #14532d !important;
+}}
+
+/* Tarjetas de métricas */
+div[data-testid="stMetric"] {{
+    background: #ffffff;
+    border: 1px solid #b7e1c1;
+    border-top: 4px solid {VERDE_PRINCIPAL};
+    padding: 14px;
+    border-radius: 10px;
+}}
+div[data-testid="stMetric"] label {{
+    color: #1f2937 !important;
+    font-weight: 600;
+}}
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
+    color: #000000 !important;
+    font-weight: 700;
+}}
+
+/* Desplegables (Selectbox, Multiselect, DateInput) en gris con texto negro */
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"] > div {{
+    background-color: {GRIS_DESPLEGABLE} !important;
+    color: #000000 !important;
+    border: 1px solid #9ca3af !important;
+    border-radius: 8px !important;
+}}
+div[data-baseweb="select"] span,
+div[data-baseweb="select"] input,
+div[data-baseweb="input"] input {{
+    color: #000000 !important;
+}}
+div[data-baseweb="select"] svg {{
+    fill: #000000 !important;
+    color: #000000 !important;
+}}
+
+/* Tags seleccionados dentro del multiselect */
+span[data-baseweb="tag"] {{
+    background-color: {VERDE_PRINCIPAL} !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+}}
+span[data-baseweb="tag"] span,
+span[data-baseweb="tag"] svg {{
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}}
+
+/* Menú desplegable flotante (popover / listbox) en gris y opciones en negro */
+div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
+ul[role="listbox"],
+ul[role="listbox"] li,
+div[role="option"] {{
+    background-color: {GRIS_DESPLEGABLE} !important;
+    color: #000000 !important;
+}}
+ul[role="listbox"] li:hover,
+div[role="option"]:hover,
+li[aria-selected="true"] {{
+    background-color: {GRIS_HOVER} !important;
+    color: #000000 !important;
+}}
+ul[role="listbox"] * {{
+    color: #000000 !important;
+}}
+
+/* Pestañas en verde #30b44e */
+button[data-baseweb="tab"] {{
+    color: #1f2937 !important;
+    font-weight: 600;
+}}
+button[data-baseweb="tab"][aria-selected="true"] {{
+    color: {VERDE_PRINCIPAL} !important;
+    border-bottom-color: {VERDE_PRINCIPAL} !important;
+}}
+div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {{
+    background-color: {VERDE_PRINCIPAL} !important;
+}}
+
+/* Botones en verde #30b44e */
+.stButton > button,
+.stDownloadButton > button {{
+    background-color: {VERDE_PRINCIPAL} !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}}
+.stButton > button:hover,
+.stDownloadButton > button:hover {{
+    background-color: {VERDE_OSCURO} !important;
+    color: #ffffff !important;
+}}
+
+/* Bloques de estado: crítico (rojo), a trabajar (naranja), positivo (verde) */
+.estado-critico {{
+    background: #fef2f2;
+    border-left: 5px solid {ROJO_CRITICO};
+    border-top: 1px solid #fecaca;
+    border-right: 1px solid #fecaca;
+    border-bottom: 1px solid #fecaca;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: #000000;
+}}
+.estado-trabajar {{
+    background: #fff7ed;
+    border-left: 5px solid {NARANJA_TRABAJAR};
+    border-top: 1px solid #fed7aa;
+    border-right: 1px solid #fed7aa;
+    border-bottom: 1px solid #fed7aa;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: #000000;
+}}
+.estado-positivo {{
+    background: {VERDE_SUAVE};
+    border-left: 5px solid {VERDE_PRINCIPAL};
+    border-top: 1px solid #bbf7d0;
+    border-right: 1px solid #bbf7d0;
+    border-bottom: 1px solid #bbf7d0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: #000000;
+}}
+.badge-critico {{
+    color: {ROJO_CRITICO};
+    font-weight: 700;
+}}
+.badge-trabajar {{
+    color: {NARANJA_TRABAJAR};
+    font-weight: 700;
+}}
+.badge-positivo {{
+    color: {VERDE_PRINCIPAL};
+    font-weight: 700;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -184,12 +323,10 @@ def normalizar_tipo(valor):
 
 
 def parsear_fecha_segura(serie):
-    # Intenta día/mes/año primero, luego parseo estándar sin dayfirst
     f1 = pd.to_datetime(serie, dayfirst=True, errors="coerce")
     f2 = pd.to_datetime(serie, dayfirst=False, errors="coerce")
     resultado = f1.fillna(f2)
 
-    # Si hay números de serie de Excel (ej. 45890)
     faltantes = resultado.isna()
     if faltantes.any():
         nums = pd.to_numeric(serie[faltantes], errors="coerce")
@@ -233,8 +370,6 @@ def leer_mediciones():
         engine="python"
     )
 
-    # Se toman filas desde la 10 en adelante (índice 9) y columnas A:AG (33 columnas).
-    # Si el sheet tiene más columnas, se asegura que tenga al menos 33.
     if bruto.shape[1] < 33:
         for _ in range(33 - bruto.shape[1]):
             bruto[bruto.shape[1]] = ""
@@ -252,7 +387,6 @@ def leer_mediciones():
     for col in datos.columns:
         datos[col] = datos[col].astype(str).str.strip()
 
-    # Conserva toda fila que tenga Asesor o Campaña (evita descartar casos válidos)
     datos = datos[
         (datos["Asesor"] != "") | (datos["Campaña"] != "")
     ].copy()
@@ -267,7 +401,6 @@ def leer_mediciones():
     )
     datos["Tipo normalizado"] = datos["Tipo de gestión"].apply(normalizar_tipo)
 
-    # Prioriza Mes derivado de Fecha; si no hay Fecha válida, usa Mes_raw si tiene formato YYYY-MM
     mes_fecha = datos["Fecha"].dt.to_period("M").astype(str)
     mes_raw = datos["Mes_raw"].where(datos["Mes_raw"].str.match(r"^\d{4}-\d{2}$"), "")
     datos["Mes"] = mes_fecha.where(datos["Fecha"].notna(), mes_raw)
@@ -313,7 +446,7 @@ def construir_detalle_criterios(datos):
     return pd.DataFrame(registros)
 
 
-def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False):
+def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False, color_map=None):
     fig.update_layout(
         title=dict(text=titulo, font=dict(color="#000000", size=19)),
         font=dict(color="#000000", size=12),
@@ -323,33 +456,51 @@ def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False):
         margin=dict(l=20, r=20, t=65, b=35),
         hoverlabel=dict(font=dict(color="#000000"))
     )
+    if color_map:
+        fig.update_traces(marker=dict(color=[color_map.get(v, VERDE_PRINCIPAL) for v in fig.data[0].y]) if fig.data and fig.data[0].orientation == "h" else None)
     fig.update_xaxes(
         title_text=eje_x,
         color="#000000",
         title_font=dict(color="#000000"),
         tickfont=dict(color="#000000"),
-        gridcolor="#E2E8E4"
+        gridcolor="#d1fae5"
     )
     fig.update_yaxes(
         title_text=eje_y,
         color="#000000",
         title_font=dict(color="#000000"),
         tickfont=dict(color="#000000"),
-        gridcolor="#E2E8E4",
+        gridcolor="#d1fae5",
         ticksuffix="%" if es_porcentaje_y else ""
     )
     return fig
 
 
-def mostrar_tabla(datos, columnas=None):
+def colorear_estado_df(df_mostrar):
+    def estilo_fila(fila):
+        estilos = [""] * len(fila)
+        for idx, col in enumerate(fila.index):
+            val = str(fila[col]).lower()
+            if "crític" in col.lower() or "incumpl" in col.lower() or "no" == val:
+                estilos[idx] = f"color: {ROJO_CRITICO}; font-weight: 700;"
+            elif "trabajar" in col.lower() or "mejora" in col.lower():
+                estilos[idx] = f"color: {NARANJA_TRABAJAR}; font-weight: 700;"
+            elif "positiv" in col.lower() or "cumpl" in col.lower() or "fortaleza" in col.lower():
+                estilos[idx] = f"color: {VERDE_PRINCIPAL}; font-weight: 700;"
+        return estilos
+
+    return df_mostrar.style.apply(estilo_fila, axis=1)
+
+
+def mostrar_tabla(datos, columnas=None, colorear=False):
     if datos.empty:
         st.info("No hay datos para mostrar con la selección actual.")
     else:
-        st.dataframe(
-            datos if columnas is None else datos[columnas],
-            use_container_width=True,
-            hide_index=True
-        )
+        tabla = datos if columnas is None else datos[columnas]
+        if colorear:
+            st.dataframe(colorear_estado_df(tabla), use_container_width=True, hide_index=True)
+        else:
+            st.dataframe(tabla, use_container_width=True, hide_index=True)
 
 
 def promedio_anual(datos):
@@ -368,7 +519,10 @@ def resumen_por_dimension(df_criterios):
         Incumplimientos=("Respuesta", lambda x: (x == "no").sum()),
         Mejoras=("Respuesta", lambda x: (x == "punto de mejora").sum())
     )
-    res["% crítico"] = ((res["Incumplimientos"] + res["Mejoras"]) / res["Evaluaciones"] * 100).round(0).astype(int).astype(str) + "%"
+    res["% crítico"] = (
+        ((res["Incumplimientos"] + res["Mejoras"]) / res["Evaluaciones"] * 100)
+        .round(0).astype(int).astype(str) + "%"
+    )
     res["Descuento"] = res["Descuento"].round(0).astype(int)
     return res.sort_values(["Descuento", "Incumplimientos"], ascending=[False, False])
 
@@ -454,7 +608,6 @@ if campañas:
 if asesores:
     filtrado = filtrado[filtrado["Asesor"].isin(asesores)]
 
-# Aplica rango de fechas a filas con fecha válida (conserva filas sin fecha solo si no se restringió un rango puntual o si se filtró por mes)
 if not df_con_fecha.empty:
     misma_rango_total = (fecha_inicio == fecha_min) and (fecha_fin == fecha_max)
     if not misma_rango_total or meses_seleccionados:
@@ -500,7 +653,8 @@ if len(meses_seleccionados) >= 2:
 
     fig_comp = px.bar(
         comp_mes, x="Mes", y="Calidad_num", text="Calidad",
-        labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
+        labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"},
+        color_discrete_sequence=[VERDE_PRINCIPAL]
     )
     fig_comp.update_traces(textposition="outside")
     st.plotly_chart(
@@ -611,7 +765,8 @@ with tab1:
     fig = px.bar(
         tabla_asesores, x="Asesor", y="Calidad_num",
         labels={"Calidad_num": "Calidad (%)", "Asesor": "Asesor"},
-        text="Calidad"
+        text="Calidad",
+        color_discrete_sequence=[VERDE_PRINCIPAL]
     )
     fig.update_traces(textposition="outside")
     st.plotly_chart(
@@ -657,20 +812,20 @@ with tab2:
 
     c_com, c_act = st.columns(2)
     with c_com:
-        st.markdown("**Aspectos críticos comerciales**")
+        st.markdown(f'<span class="badge-critico">Aspectos críticos comerciales</span>', unsafe_allow_html=True)
         top_com = res_dim[res_dim["Dimensión"] == "Comercial"].head(5)
         mostrar_tabla(top_com[[
             "Criterio", "Descuento", "Incumplimientos", "Mejoras", "% crítico"
-        ]])
+        ]], colorear=True)
 
     with c_act:
-        st.markdown("**Aspectos críticos actitudinales**")
+        st.markdown(f'<span class="badge-critico">Aspectos críticos actitudinales</span>', unsafe_allow_html=True)
         top_act = res_dim[res_dim["Dimensión"] == "Actitudinal"].head(5)
         mostrar_tabla(top_act[[
             "Criterio", "Descuento", "Incumplimientos", "Mejoras", "% crítico"
-        ]])
+        ]], colorear=True)
 
-    st.markdown("#### Aspectos a trabajar reportados en auditoría")
+    st.markdown(f'<span class="badge-trabajar">Aspectos a trabajar reportados en auditoría</span>', unsafe_allow_html=True)
     puntos_trabajar = individual[
         individual["Puntos a trabajar"].str.strip() != ""
     ][["Fecha", "Campaña", "Puntaje final", "Puntos a trabajar", "Observaciones"]].copy()
@@ -694,15 +849,16 @@ with tab2:
 
         fig = px.bar(
             descuentos, x="Descuento", y="Criterio", color="Dimensión", orientation="h",
-            labels={"Descuento": "Puntos descontados", "Criterio": "Criterio"}
+            labels={"Descuento": "Puntos descontados", "Criterio": "Criterio"},
+            color_discrete_map={"Comercial": ROJO_CRITICO, "Actitudinal": NARANJA_TRABAJAR}
         )
         st.plotly_chart(
             estilo_grafico(fig, "Puntos descontados por criterio", "Puntos", "Criterio"),
             use_container_width=True
         )
-        mostrar_tabla(descuentos)
+        mostrar_tabla(descuentos, colorear=True)
 
-        st.markdown("#### Reincidencias")
+        st.markdown(f'<span class="badge-trabajar">Reincidencias (a trabajar)</span>', unsafe_allow_html=True)
         reinc = criterios_individual[
             criterios_individual["Respuesta"].isin(["no", "punto de mejora"])
         ].groupby(["Criterio", "Dimensión", "Respuesta"]).size().unstack(fill_value=0).reset_index()
@@ -716,9 +872,9 @@ with tab2:
             "no": "Incumplimientos",
             "punto de mejora": "Puntos de mejora"
         }).sort_values("Total de apariciones", ascending=False)
-        mostrar_tabla(reinc)
+        mostrar_tabla(reinc, colorear=True)
 
-        st.markdown("#### Fortalezas individuales")
+        st.markdown(f'<span class="badge-positivo">Fortalezas individuales (aspectos positivos)</span>', unsafe_allow_html=True)
         fortalezas = criterios_individual.groupby(["Criterio", "Dimensión"], as_index=False).agg(
             Evaluaciones=("Respuesta", "count"),
             Cumplimientos=("Respuesta", lambda x: x.isin(["si", "sí"]).sum()),
@@ -728,7 +884,7 @@ with tab2:
             ((fortalezas["Cumplimientos"] + fortalezas["N_A"]) / fortalezas["Evaluaciones"] * 100)
             .round(0).astype(int).astype(str) + "%"
         )
-        mostrar_tabla(fortalezas)
+        mostrar_tabla(fortalezas, colorear=True)
 
     st.markdown("#### Evolución mensual del asesor")
     mensual = individual[individual["Mes"] != "Sin mes"].groupby("Mes", as_index=False).agg(
@@ -739,7 +895,8 @@ with tab2:
         mensual["Calidad"] = mensual["Calidad_num"].apply(fmt_pct)
         fig = px.line(
             mensual, x="Mes", y="Calidad_num", markers=True,
-            labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
+            labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"},
+            color_discrete_sequence=[VERDE_PRINCIPAL]
         )
         st.plotly_chart(
             estilo_grafico(fig, "Evolución mensual", "Mes", "Calidad", es_porcentaje_y=True),
@@ -772,7 +929,8 @@ with tab3:
 
     fig = px.bar(
         resumen_camp, x="Campaña", y="Calidad_num", text="Calidad",
-        labels={"Calidad_num": "Calidad (%)", "Campaña": "Campaña"}
+        labels={"Calidad_num": "Calidad (%)", "Campaña": "Campaña"},
+        color_discrete_sequence=[VERDE_PRINCIPAL]
     )
     fig.update_traces(textposition="outside")
     st.plotly_chart(
@@ -817,252 +975,3 @@ with tab4:
         empresa_anual = df_con_fecha[df_con_fecha["Año"] == año_sel_empresa].copy()
     else:
         año_sel_empresa = "Todos"
-        empresa_anual = df.copy()
-
-    m1, m2, m3 = st.columns(3)
-    m1.metric(f"Puntuación total empresa {año_sel_empresa}", fmt_pct(promedio_anual(empresa_anual)))
-    m2.metric("Auditorías", len(empresa_anual))
-    m3.metric("Campañas", empresa_anual["Campaña"].nunique())
-
-    st.markdown("#### Evolución mensual de la empresa")
-    empresa_mensual = empresa_anual[empresa_anual["Mes"] != "Sin mes"].groupby("Mes", as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad_num=("Puntaje final", "mean")
-    ).sort_values("Mes")
-
-    if not empresa_mensual.empty:
-        empresa_mensual["Calidad"] = empresa_mensual["Calidad_num"].apply(fmt_pct)
-        fig = px.line(
-            empresa_mensual, x="Mes", y="Calidad_num", markers=True,
-            labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
-        )
-        st.plotly_chart(
-            estilo_grafico(fig, "Promedio mensual de calidad | Empresa", "Mes", "Calidad", es_porcentaje_y=True),
-            use_container_width=True
-        )
-        mostrar_tabla(empresa_mensual[["Mes", "Auditorías", "Calidad"]])
-
-    st.markdown("#### Promedio por campaña")
-    empresa_por_camp = empresa_anual.groupby("Campaña", as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Asesores=("Asesor", "nunique"),
-        Calidad_num=("Puntaje final", "mean")
-    ).sort_values("Calidad_num", ascending=False)
-    empresa_por_camp["Calidad"] = empresa_por_camp["Calidad_num"].apply(fmt_pct)
-    mostrar_tabla(empresa_por_camp[["Campaña", "Auditorías", "Asesores", "Calidad"]])
-
-# =====================================================
-# 5. HISTÓRICO POR ASESOR Y CAMPAÑA
-# =====================================================
-with tab5:
-    st.subheader("Histórico mensual por asesor y campaña")
-    asesores_historico = sorted(df["Asesor"].dropna().unique())
-    asesor_historico = st.selectbox(
-        "Seleccionar asesor", asesores_historico,
-        key="asesor_historico"
-    )
-
-    base_asesor_all = df[df["Asesor"] == asesor_historico].copy()
-    años_asesor = sorted(base_asesor_all["Año"].dropna().astype(int).unique())
-
-    if años_asesor:
-        año_sel_asesor = st.selectbox(
-            "Año",
-            options=años_asesor,
-            index=max(0, len(años_asesor) - 1),
-            key="año_historico_asesor"
-        )
-        base_asesor_hist = base_asesor_all[base_asesor_all["Año"] == año_sel_asesor].copy()
-    else:
-        base_asesor_hist = base_asesor_all
-
-    b1, b2, b3 = st.columns(3)
-    b1.metric("Auditorías", len(base_asesor_hist))
-    b2.metric("Promedio del asesor", fmt_pct(base_asesor_hist["Puntaje final"].mean()))
-    b3.metric("Campañas", base_asesor_hist["Campaña"].nunique())
-
-    st.markdown("#### Evolución mensual: una línea por campaña")
-    asesor_mes_camp = base_asesor_hist[base_asesor_hist["Mes"] != "Sin mes"].groupby(
-        ["Mes", "Campaña"], as_index=False
-    ).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad_num=("Puntaje final", "mean")
-    ).sort_values(["Mes", "Campaña"])
-
-    if not asesor_mes_camp.empty:
-        asesor_mes_camp["Calidad"] = asesor_mes_camp["Calidad_num"].apply(fmt_pct)
-        fig = px.line(
-            asesor_mes_camp, x="Mes", y="Calidad_num", color="Campaña",
-            markers=True, labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
-        )
-        st.plotly_chart(
-            estilo_grafico(
-                fig, f"Evolución mensual por campaña | {asesor_historico}",
-                "Mes", "Calidad", es_porcentaje_y=True
-            ),
-            use_container_width=True
-        )
-        mostrar_tabla(asesor_mes_camp[["Mes", "Campaña", "Auditorías", "Calidad"]])
-
-    st.markdown("#### Promedio por campaña del asesor")
-    asesor_por_camp = base_asesor_hist.groupby("Campaña", as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad_num=("Puntaje final", "mean")
-    ).sort_values("Calidad_num", ascending=False)
-    asesor_por_camp["Calidad"] = asesor_por_camp["Calidad_num"].apply(fmt_pct)
-    mostrar_tabla(asesor_por_camp[["Campaña", "Auditorías", "Calidad"]])
-
-# =====================================================
-# 6. CRITERIOS Y DETALLE DE AUDITORÍAS
-# =====================================================
-with tab6:
-    st.subheader("Análisis general de criterios")
-    if not detalle_filtrado.empty:
-        resumen_criterios = detalle_filtrado.groupby(["Criterio", "Dimensión"], as_index=False).agg(
-            Evaluaciones=("Respuesta", "count"),
-            SI=("Respuesta", lambda x: x.isin(["si", "sí"]).sum()),
-            NO=("Respuesta", lambda x: (x == "no").sum()),
-            Mejoras=("Respuesta", lambda x: (x == "punto de mejora").sum()),
-            NA=("Respuesta", lambda x: (x == "n/a").sum()),
-            Descuento=("Descuento", "sum")
-        )
-
-        resumen_criterios["% cumplimiento"] = (
-            ((resumen_criterios["SI"] + resumen_criterios["NA"]) / resumen_criterios["Evaluaciones"] * 100)
-            .round(0).astype(int).astype(str) + "%"
-        )
-        resumen_criterios["% incumplimiento"] = (
-            (resumen_criterios["NO"] / resumen_criterios["Evaluaciones"] * 100)
-            .round(0).astype(int).astype(str) + "%"
-        )
-        resumen_criterios["Descuento"] = resumen_criterios["Descuento"].round(0).astype(int)
-
-        mayores = resumen_criterios.sort_values("Descuento", ascending=False)
-        fig = px.bar(
-            mayores, x="Descuento", y="Criterio", color="Dimensión", orientation="h",
-            labels={"Descuento": "Puntos descontados", "Criterio": "Criterio"}
-        )
-        st.plotly_chart(
-            estilo_grafico(fig, "Criterios con mayor descuento", "Puntos", "Criterio"),
-            use_container_width=True
-        )
-        mostrar_tabla(resumen_criterios)
-
-    st.divider()
-    st.subheader("Detalle de auditorías")
-    columnas_detalle = [
-        "Fecha", "Asesor", "Campaña", "ID", "Tipo de gestión",
-        "Tipificación", "Puntaje final", "Puntos a trabajar",
-        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
-    ]
-    detalle = filtrado[columnas_detalle].copy()
-    detalle["Fecha_str"] = detalle["Fecha"].dt.strftime("%d/%m/%Y").fillna("Sin fecha")
-    detalle["Calidad"] = detalle["Puntaje final"].apply(fmt_pct)
-    detalle = detalle.sort_values("Fecha", ascending=False, na_position="last")
-    mostrar_tabla(detalle[[
-        "Fecha_str", "Asesor", "Campaña", "ID", "Tipo de gestión",
-        "Tipificación", "Calidad", "Puntos a trabajar",
-        "Observaciones", "¿Tipifica bien?", "Tipificación correcta"
-    ]])
-
-    csv = filtrado[columnas_detalle].to_csv(
-        index=False, sep=";", encoding="utf-8-sig"
-    )
-    st.download_button(
-        "Descargar auditorías en CSV",
-        data=csv,
-        file_name="auditorias_calidad_contactel.csv",
-        mime="text/csv"
-    )
-
-# =====================================================
-# 7. ANÁLISIS RÁPIDO Y RECOMENDACIONES
-# =====================================================
-with tab7:
-    st.subheader("Diagnóstico rápido y recomendaciones accionables")
-    st.caption("Calculado automáticamente sobre los registros filtrados actualmente.")
-
-    res_global_dim = resumen_por_dimension(detalle_filtrado)
-    ranking_asesores = filtrado.groupby("Asesor", as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad=("Puntaje final", "mean")
-    ).sort_values("Calidad", ascending=True)
-
-    ranking_campanas = filtrado.groupby("Campaña", as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad=("Puntaje final", "mean")
-    ).sort_values("Calidad", ascending=True)
-
-    hallazgos = []
-
-    if not ranking_asesores.empty:
-        peor_asesor = ranking_asesores.iloc[0]
-        mejor_asesor = ranking_asesores.iloc[-1]
-        hallazgos.append(
-            f"**Asesores:** Mayor oportunidad de mejora en **{peor_asesor['Asesor']}** "
-            f"({fmt_pct(peor_asesor['Calidad'])} en {int(peor_asesor['Auditorías'])} auditorías); "
-            f"referente del período: **{mejor_asesor['Asesor']}** ({fmt_pct(mejor_asesor['Calidad'])})."
-        )
-
-    if not ranking_campanas.empty:
-        peor_camp = ranking_campanas.iloc[0]
-        hallazgos.append(
-            f"**Campañas:** **{peor_camp['Campaña']}** registra el menor promedio del filtro "
-            f"({fmt_pct(peor_camp['Calidad'])})."
-        )
-
-    top_com_global = res_global_dim[res_global_dim["Dimensión"] == "Comercial"]
-    if not top_com_global.empty:
-        c_crit = top_com_global.iloc[0]
-        rec_c = RECOMENDACIONES_CRITERIO.get(c_crit["Criterio"], "Reforzar práctica guiada en coaching.")
-        hallazgos.append(
-            f"**Aspecto comercial más crítico:** **{c_crit['Criterio']}** "
-            f"({c_crit['Descuento']} pts descontados / {c_crit['% crítico']} crítico). "
-            f"*Recomendación:* {rec_c}"
-        )
-
-    top_act_global = res_global_dim[res_global_dim["Dimensión"] == "Actitudinal"]
-    if not top_act_global.empty:
-        a_crit = top_act_global.iloc[0]
-        rec_a = RECOMENDACIONES_CRITERIO.get(a_crit["Criterio"], "Trabajar tono y cercanía en llamada.")
-        hallazgos.append(
-            f"**Aspecto actitudinal más crítico:** **{a_crit['Criterio']}** "
-            f"({a_crit['Descuento']} pts descontados / {a_crit['% crítico']} crítico). "
-            f"*Recomendación:* {rec_a}"
-        )
-
-    if "¿Tipifica bien?" in filtrado.columns:
-        mal_tip = filtrado[filtrado["¿Tipifica bien?"].str.lower().isin(["no", "incorrecto"])]
-        if not mal_tip.empty:
-            pct_tip = len(mal_tip) / len(filtrado) * 100
-            hallazgos.append(
-                f"**Tipificación:** {len(mal_tip)} auditorías ({fmt_pct(pct_tip)}) presentan error de tipificación. "
-                f"*Recomendación:* revisar catálogo de motivos y validar cierre de gestión en calibraciones."
-            )
-
-    for h in hallazgos:
-        st.markdown(f'<div class="insight-box">{h}</div>', unsafe_allow_html=True)
-
-    st.markdown("#### Plan de acción sugerido por criterio crítico")
-    if not res_global_dim.empty:
-        plan = res_global_dim.head(6).copy()
-        plan["Acción recomendada"] = plan["Criterio"].map(
-            lambda c: RECOMENDACIONES_CRITERIO.get(c, "Realizar coaching 1 a 1.")
-        )
-        mostrar_tabla(plan[[
-            "Dimensión", "Criterio", "Descuento", "% crítico", "Acción recomendada"
-        ]])
-
-# =====================================================
-# PIE Y ACTUALIZACIÓN
-# =====================================================
-st.divider()
-st.caption(
-    "Calidad y Capacitación | Contactel | "
-    "Actualización automática de datos cada 5 minutos."
-)
-st.caption("La columna AC (Acción) está excluida del análisis y de las vistas.")
-
-if st.button("Actualizar datos ahora"):
-    st.cache_data.clear()
-    st.rerun()
