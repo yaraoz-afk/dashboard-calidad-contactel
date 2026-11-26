@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -559,6 +560,12 @@ def normalizar_clave(valor):
     return limpiar_texto_etiqueta(valor).lower()
 
 
+def normalizar_clave_campana(valor):
+    texto = normalizar_clave(valor)
+    texto = re.sub(r"[\s\-_]+", " ", texto).strip()
+    return texto
+
+
 def nombre_mes_desde_valor(mes_raw, fecha_dt):
     if pd.notna(fecha_dt):
         return MESES_ES.get(int(fecha_dt.month), "Sin mes")
@@ -727,7 +734,7 @@ def leer_mediciones_crudo_y_procesado():
         extraer_anio_seguro(f_dt, m_raw, f_raw)
         for f_dt, m_raw, f_raw in zip(datos["Fecha"], datos["Mes_raw"], datos["Fecha_raw"])
     ]
-    datos["Campaña_key"] = datos["Campaña"].apply(normalizar_clave)
+    datos["Campaña_key"] = datos["Campaña"].apply(normalizar_clave_campana)
     datos["Asesor_key"] = datos["Asesor"].apply(normalizar_clave)
 
     return bruto, datos
@@ -849,7 +856,7 @@ def filtrar_registros(base_df, anios_sel, meses_sel, camps_sel, ases_sel=None,
 
     base_ases = out.copy()
     if camps_sel:
-        claves_c = {normalizar_clave(c) for c in camps_sel}
+        claves_c = {normalizar_clave_campana(c) for c in camps_sel}
         base_ases = base_ases[base_ases["Campaña_key"].isin(claves_c)]
         out = out[out["Campaña_key"].isin(claves_c)]
 
@@ -1144,7 +1151,7 @@ if seccion == "Vista por asesor":
     firma_a = (
         tuple(a_anios_sel or []),
         tuple(a_meses_sel or []),
-        tuple(normalizar_clave(c) for c in (a_camps_sel or []))
+        tuple(normalizar_clave_campana(c) for c in (a_camps_sel or []))
     )
     preparar_selector_asesor("va_ases", "va_firma_filtro", firma_a, ases_opciones_a)
 
@@ -1319,7 +1326,7 @@ else:
     firma_d = (
         tuple(d_anios_sel or []),
         tuple(d_meses_sel or []),
-        tuple(normalizar_clave(c) for c in (d_camps_sel or []))
+        tuple(normalizar_clave_campana(c) for c in (d_camps_sel or []))
     )
     preparar_selector_asesor("da_ases", "da_firma_filtro", firma_d, ases_opciones_d)
 
@@ -1384,11 +1391,18 @@ else:
 with st.expander("Diagnóstico de campañas y fechas en el Sheet"):
     resumen_camp_diag = df.groupby(["Campaña", "Año", "Mes"], as_index=False).agg(
         Filas=("Asesor", "count"),
+        Asesores=("Asesor", lambda s: ", ".join(sorted(set(s)))),
         Fechas_raw_muestra=("Fecha_raw", lambda s: ", ".join(sorted({x for x in s if x})[:3])),
         Mes_raw_muestra=("Mes_raw", lambda s: ", ".join(sorted({x for x in s if x})[:3]))
     ).sort_values(["Campaña", "Año", "Mes"])
     st.caption(f"Filas CSV crudas: {len(df_crudo)} | Columnas CSV crudas: {df_crudo.shape[1]} | Registros cargados desde fila 10: {len(df)}")
     st.dataframe(resumen_camp_diag, use_container_width=True, hide_index=True)
+
+    camp_inspeccion = st.selectbox("Inspeccionar filas de una campaña en todo el Sheet:", options=camp_disp, key="diag_camp_sel")
+    df_ins = df[df["Campaña_key"] == normalizar_clave_campana(camp_inspeccion)][
+        ["Fecha_raw", "Año", "Mes", "Mes_raw", "Asesor", "Campaña", "Puntaje final"]
+    ]
+    st.dataframe(df_ins, use_container_width=True, hide_index=True)
 
 # =====================================================
 # PIE Y ACTUALIZACIÓN
