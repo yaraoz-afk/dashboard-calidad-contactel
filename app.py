@@ -405,6 +405,71 @@ table.matriz-emp tr.fila-total-camp td.td-vacio-final {{
     background-color: #ffffff;
 }}
 
+/* Cuadro de auditorías y puntuación por campaña y período */
+.resumen-per-wrap {{
+    max-width: 680px;
+    background: #ffffff;
+    border: 1px solid #64748b;
+    border-radius: 4px;
+    margin-bottom: 18px;
+    overflow: hidden;
+}}
+table.resumen-per {{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: #ffffff;
+}}
+table.resumen-per th.th-per-titulo {{
+    background-color: #bfbfbf;
+    color: #000000;
+    font-weight: 800;
+    text-align: center;
+    padding: 7px 10px;
+    border: 1px solid #64748b;
+    font-size: 14px;
+}}
+table.resumen-per th.th-per-col {{
+    background-color: #2ea043;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: center;
+    padding: 7px 10px;
+    border: 1px solid #64748b;
+}}
+table.resumen-per td.td-per-camp {{
+    background-color: #595959;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 10px;
+    border: 1px solid #64748b;
+}}
+table.resumen-per td.td-per-q {{
+    background-color: #ffffff;
+    color: #000000;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 10px;
+    border: 1px solid #64748b;
+}}
+table.resumen-per td.td-per-prom {{
+    background-color: #ffffff;
+    color: #000000;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 10px;
+    border: 1px solid #64748b;
+}}
+table.resumen-per tr.fila-per-total td {{
+    background-color: #2ea043;
+    color: #ffffff;
+    font-weight: 800;
+    text-align: center;
+    padding: 7px 10px;
+    border: 1px solid #64748b;
+}}
+
 /* Cuadro comparativo con nombre legible y focos completos */
 .cuadro-comp-titulo {{
     font-size: 15px;
@@ -1007,6 +1072,76 @@ def render_matriz_empresa_html(base_emp):
     )
 
 
+def render_cuadros_por_periodo_html(base_emp, camps_sel):
+    df_p = base_emp[base_emp["Mes"] != "Sin mes"].copy()
+    if df_p.empty:
+        st.info("No hay auditorías por período con la selección actual.")
+        return
+
+    campañas_mostrar = sorted(camps_sel) if camps_sel else sorted(df_p["Campaña"].unique())
+    periodos_df = (
+        df_p[["Año", "Mes", "Mes_orden"]]
+        .drop_duplicates()
+        .sort_values(["Año", "Mes_orden"], ascending=[False, False])
+    )
+
+    for _, per in periodos_df.iterrows():
+        anio_p = per["Año"]
+        mes_p = per["Mes"]
+        etq_per = f"{mes_p.lower()} {anio_p}" if anio_p != "Sin año" else mes_p.lower()
+
+        sub_per = df_p[(df_p["Año"] == anio_p) & (df_p["Mes"] == mes_p)]
+        filas_html = []
+        total_q = 0
+        proms_camp = []
+
+        for camp in campañas_mostrar:
+            sub_c = sub_per[sub_per["Campaña"] == camp]
+            q_c = int(len(sub_c))
+            total_q += q_c
+            prom_c = sub_c["Puntaje final"].mean() if q_c > 0 else None
+
+            if prom_c is not None and pd.notna(prom_c):
+                prom_txt = fmt_pct(prom_c)
+                proms_camp.append(float(prom_c))
+            else:
+                prom_txt = ""
+
+            filas_html.append(
+                f"<tr>"
+                f'<td class="td-per-camp">{camp}</td>'
+                f'<td class="td-per-q">{q_c}</td>'
+                f'<td class="td-per-prom">{prom_txt}</td>'
+                f"</tr>"
+            )
+
+        prom_total_per = (sum(proms_camp) / len(proms_camp)) if proms_camp else None
+        prom_total_txt = fmt_pct(prom_total_per) if prom_total_per is not None else "-"
+
+        filas_html.append(
+            f'<tr class="fila-per-total">'
+            f"<td>Total</td>"
+            f"<td>{total_q}</td>"
+            f"<td>{prom_total_txt}</td>"
+            f"</tr>"
+        )
+
+        st.markdown(
+            f'<div class="resumen-per-wrap"><table class="resumen-per">'
+            f'<thead>'
+            f'<tr><th class="th-per-titulo" colspan="3">{etq_per}</th></tr>'
+            f'<tr>'
+            f'<th class="th-per-col">Campaña</th>'
+            f'<th class="th-per-col">Q de auditorias</th>'
+            f'<th class="th-per-col">Puntuación<br>promedio</th>'
+            f'</tr>'
+            f'</thead>'
+            f'<tbody>{"".join(filas_html)}</tbody>'
+            f'</table></div>',
+            unsafe_allow_html=True
+        )
+
+
 def resumen_ejes_criterios(df_crit):
     if df_crit.empty:
         return pd.DataFrame(columns=[
@@ -1480,25 +1615,23 @@ elif seccion == "Vista por empresa":
 
     if not hist_emp_camp.empty:
         hist_emp_camp["Calidad"] = hist_emp_camp["Calidad_num"].apply(fmt_pct)
-        fig_ec = px.line(
-            hist_emp_camp, x="Mes", y="Calidad_num", color="Campaña", markers=True,
+        fig_ec = px.bar(
+            hist_emp_camp,
+            x="Mes",
+            y="Calidad_num",
+            color="Campaña",
+            barmode="group",
+            text="Calidad",
             labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
         )
+        fig_ec.update_traces(textposition="outside", cliponaxis=False)
         st.plotly_chart(
             estilo_grafico(fig_ec, "Campaña y mes — Porcentaje de calidad", "Mes", "Calidad", es_porcentaje_y=True),
             use_container_width=True
         )
 
-    st.markdown("### Cuadro de auditorías por año y mes")
-    cuadro_emp = base_emp[base_emp["Mes"] != "Sin mes"].groupby(["Año", "Mes", "Mes_orden"], as_index=False).agg(
-        Auditorías=("Puntaje final", "count"),
-        Calidad_num=("Puntaje final", "mean")
-    ).sort_values(["Año", "Mes_orden"])
-    if not cuadro_emp.empty:
-        cuadro_emp["Calidad"] = cuadro_emp["Calidad_num"].apply(fmt_pct)
-        mostrar_tabla(cuadro_emp[["Año", "Mes", "Auditorías", "Calidad"]])
-    else:
-        mostrar_tabla(pd.DataFrame(columns=["Año", "Mes", "Auditorías", "Calidad"]))
+    st.markdown("### Cuadro de auditorías y puntuación por campaña")
+    render_cuadros_por_periodo_html(base_emp, e_camps_sel)
 
     st.markdown(construir_deduccion_analitica_html(base_emp, "Vista por empresa"), unsafe_allow_html=True)
 
