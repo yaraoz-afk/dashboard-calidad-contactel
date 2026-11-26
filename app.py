@@ -405,29 +405,40 @@ table.matriz-emp tr.fila-total-camp td.td-vacio-final {{
     background-color: #ffffff;
 }}
 
-/* Cuadro de auditorías y puntuación por campaña y período */
+/* Cuadro único consolidado por campaña y período con barra horizontal */
 .resumen-per-wrap {{
-    max-width: 680px;
+    width: 100%;
+    overflow-x: auto;
     background: #ffffff;
     border: 1px solid #64748b;
     border-radius: 4px;
     margin-bottom: 18px;
-    overflow: hidden;
 }}
 table.resumen-per {{
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
-    color: #ffffff;
+    font-size: 12.5px;
 }}
-table.resumen-per th.th-per-titulo {{
+table.resumen-per th.th-per-grupo {{
     background-color: #bfbfbf;
     color: #000000;
     font-weight: 800;
     text-align: center;
     padding: 7px 10px;
     border: 1px solid #64748b;
-    font-size: 14px;
+    font-size: 13px;
+    white-space: nowrap;
+}}
+table.resumen-per th.th-per-camp-hdr {{
+    background-color: #2ea043;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 7px 12px;
+    border: 1px solid #64748b;
+    min-width: 190px;
+    white-space: nowrap;
 }}
 table.resumen-per th.th-per-col {{
     background-color: #2ea043;
@@ -436,14 +447,18 @@ table.resumen-per th.th-per-col {{
     text-align: center;
     padding: 7px 10px;
     border: 1px solid #64748b;
+    min-width: 105px;
+    white-space: nowrap;
+    line-height: 1.15;
 }}
 table.resumen-per td.td-per-camp {{
     background-color: #595959;
     color: #ffffff;
-    font-weight: 600;
-    text-align: center;
-    padding: 6px 10px;
+    font-weight: 700;
+    text-align: left;
+    padding: 6px 12px;
     border: 1px solid #64748b;
+    white-space: nowrap;
 }}
 table.resumen-per td.td-per-q {{
     background-color: #ffffff;
@@ -452,6 +467,7 @@ table.resumen-per td.td-per-q {{
     text-align: center;
     padding: 6px 10px;
     border: 1px solid #64748b;
+    white-space: nowrap;
 }}
 table.resumen-per td.td-per-prom {{
     background-color: #ffffff;
@@ -460,6 +476,7 @@ table.resumen-per td.td-per-prom {{
     text-align: center;
     padding: 6px 10px;
     border: 1px solid #64748b;
+    white-space: nowrap;
 }}
 table.resumen-per tr.fila-per-total td {{
     background-color: #2ea043;
@@ -468,6 +485,11 @@ table.resumen-per tr.fila-per-total td {{
     text-align: center;
     padding: 7px 10px;
     border: 1px solid #64748b;
+    white-space: nowrap;
+}}
+table.resumen-per tr.fila-per-total td.td-per-total-etq {{
+    text-align: left;
+    padding-left: 12px;
 }}
 
 /* Cuadro comparativo con nombre legible y focos completos */
@@ -982,7 +1004,11 @@ def estilo_grafico(fig, titulo, eje_x=None, eje_y=None, es_porcentaje_y=False):
         plot_bgcolor="rgba(0,0,0,0)",
         legend=dict(font=dict(color="#000000")),
         margin=dict(l=20, r=20, t=60, b=35),
-        hoverlabel=dict(font=dict(color="#000000"))
+        hoverlabel=dict(
+            bgcolor="#ffffff",
+            bordercolor="#14532d",
+            font=dict(color="#000000", size=12)
+        )
     )
     fig.update_xaxes(
         title_text=eje_x,
@@ -1082,64 +1108,64 @@ def render_cuadros_por_periodo_html(base_emp, camps_sel):
     periodos_df = (
         df_p[["Año", "Mes", "Mes_orden"]]
         .drop_duplicates()
-        .sort_values(["Año", "Mes_orden"], ascending=[False, False])
+        .sort_values(["Año", "Mes_orden"], ascending=[True, True])
     )
+
+    grupos_hdr = ['<th class="th-per-camp-hdr" rowspan="2">Campaña</th>']
+    sub_hdr = []
+    totales_q_per = []
+    totales_prom_per = []
 
     for _, per in periodos_df.iterrows():
         anio_p = per["Año"]
         mes_p = per["Mes"]
         etq_per = f"{mes_p.lower()} {anio_p}" if anio_p != "Sin año" else mes_p.lower()
 
+        grupos_hdr.append(f'<th class="th-per-grupo" colspan="2">{etq_per}</th>')
+        sub_hdr.append('<th class="th-per-col">Q de auditorias</th>')
+        sub_hdr.append('<th class="th-per-col">Puntuación<br>promedio</th>')
+
         sub_per = df_p[(df_p["Año"] == anio_p) & (df_p["Mes"] == mes_p)]
-        filas_html = []
-        total_q = 0
-        proms_camp = []
-
+        q_sum = 0
+        proms_c = []
         for camp in campañas_mostrar:
-            sub_c = sub_per[sub_per["Campaña"] == camp]
+            sc = sub_per[sub_per["Campaña"] == camp]
+            q_sum += len(sc)
+            if len(sc) > 0 and pd.notna(sc["Puntaje final"].mean()):
+                proms_c.append(float(sc["Puntaje final"].mean()))
+        totales_q_per.append(q_sum)
+        totales_prom_per.append(fmt_pct(sum(proms_c) / len(proms_c)) if proms_c else "-")
+
+    filas_html = []
+    for camp in campañas_mostrar:
+        celdas = [f'<td class="td-per-camp">{camp}</td>']
+        for _, per in periodos_df.iterrows():
+            anio_p = per["Año"]
+            mes_p = per["Mes"]
+            sub_c = df_p[(df_p["Año"] == anio_p) & (df_p["Mes"] == mes_p) & (df_p["Campaña"] == camp)]
             q_c = int(len(sub_c))
-            total_q += q_c
             prom_c = sub_c["Puntaje final"].mean() if q_c > 0 else None
+            prom_txt = fmt_pct(prom_c) if (prom_c is not None and pd.notna(prom_c)) else ""
+            celdas.append(f'<td class="td-per-q">{q_c}</td>')
+            celdas.append(f'<td class="td-per-prom">{prom_txt}</td>')
+        filas_html.append(f"<tr>{''.join(celdas)}</tr>")
 
-            if prom_c is not None and pd.notna(prom_c):
-                prom_txt = fmt_pct(prom_c)
-                proms_camp.append(float(prom_c))
-            else:
-                prom_txt = ""
+    celdas_tot = ['<td class="td-per-total-etq">Total</td>']
+    for q_t, p_t in zip(totales_q_per, totales_prom_per):
+        celdas_tot.append(f"<td>{q_t}</td>")
+        celdas_tot.append(f"<td>{p_t}</td>")
+    filas_html.append(f'<tr class="fila-per-total">{"".join(celdas_tot)}</tr>')
 
-            filas_html.append(
-                f"<tr>"
-                f'<td class="td-per-camp">{camp}</td>'
-                f'<td class="td-per-q">{q_c}</td>'
-                f'<td class="td-per-prom">{prom_txt}</td>'
-                f"</tr>"
-            )
-
-        prom_total_per = (sum(proms_camp) / len(proms_camp)) if proms_camp else None
-        prom_total_txt = fmt_pct(prom_total_per) if prom_total_per is not None else "-"
-
-        filas_html.append(
-            f'<tr class="fila-per-total">'
-            f"<td>Total</td>"
-            f"<td>{total_q}</td>"
-            f"<td>{prom_total_txt}</td>"
-            f"</tr>"
-        )
-
-        st.markdown(
-            f'<div class="resumen-per-wrap"><table class="resumen-per">'
-            f'<thead>'
-            f'<tr><th class="th-per-titulo" colspan="3">{etq_per}</th></tr>'
-            f'<tr>'
-            f'<th class="th-per-col">Campaña</th>'
-            f'<th class="th-per-col">Q de auditorias</th>'
-            f'<th class="th-per-col">Puntuación<br>promedio</th>'
-            f'</tr>'
-            f'</thead>'
-            f'<tbody>{"".join(filas_html)}</tbody>'
-            f'</table></div>',
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        f'<div class="resumen-per-wrap"><table class="resumen-per">'
+        f'<thead>'
+        f'<tr>{"".join(grupos_hdr)}</tr>'
+        f'<tr>{"".join(sub_hdr)}</tr>'
+        f'</thead>'
+        f'<tbody>{"".join(filas_html)}</tbody>'
+        f'</table></div>',
+        unsafe_allow_html=True
+    )
 
 
 def resumen_ejes_criterios(df_crit):
@@ -1621,10 +1647,18 @@ elif seccion == "Vista por empresa":
             y="Calidad_num",
             color="Campaña",
             barmode="group",
-            text="Calidad",
+            custom_data=["Campaña", "Mes", "Calidad", "Auditorías"],
             labels={"Mes": "Mes", "Calidad_num": "Calidad (%)"}
         )
-        fig_ec.update_traces(textposition="outside", cliponaxis=False)
+        fig_ec.update_traces(
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Mes: %{customdata[1]}<br>"
+                "Calidad: <b>%{customdata[2]}</b><br>"
+                "Auditorías: %{customdata[3]}"
+                "<extra></extra>"
+            )
+        )
         st.plotly_chart(
             estilo_grafico(fig_ec, "Campaña y mes — Porcentaje de calidad", "Mes", "Calidad", es_porcentaje_y=True),
             use_container_width=True
