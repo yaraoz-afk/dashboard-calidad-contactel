@@ -1,3 +1,5 @@
+import base64
+from pathlib import Path
 import re
 import streamlit as st
 import streamlit.components.v1 as components
@@ -81,6 +83,37 @@ h1, h2, h3, h4, p, label, span, div, .stMarkdown {{
 }}
 h1, h2 {{
     color: #1e293b !important;
+}}
+
+/* Encabezado con logo */
+.header-brand-wrap {{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 6px;
+}}
+.header-brand-logo {{
+    max-height: 54px;
+    width: auto;
+    object-fit: contain;
+    background: #ffffff;
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}}
+.sidebar-brand-wrap {{
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+    padding: 6px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+}}
+.sidebar-brand-logo {{
+    max-height: 44px;
+    width: auto;
+    object-fit: contain;
 }}
 
 /* Tarjetas de métricas */
@@ -232,7 +265,7 @@ ul[role="listbox"] div,
     color: #0f172a !important;
 }}
 
-/* Botones */
+/* Botones generales */
 .stButton > button,
 .stDownloadButton > button {{
     background-color: {VERDE_PRINCIPAL} !important;
@@ -247,15 +280,26 @@ ul[role="listbox"] div,
     color: #ffffff !important;
 }}
 
+/* Botón compacto "Ver auditoria" dentro de cada tarjeta */
+.btn-ver-aud-wrap .stButton > button {{
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 2px 10px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    border-radius: 5px !important;
+    line-height: 1.1 !important;
+    margin-top: 6px !important;
+}}
+
 /* Tarjeta compacta por asesor */
 .card-compacta {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-top: 4px solid #475569;
-    border-radius: 6px 6px 0 0;
-    border-bottom: none;
-    padding: 12px 14px 8px 14px;
-    margin-bottom: 0;
+    border-radius: 6px;
+    padding: 12px 14px 10px 14px;
+    margin-bottom: 12px;
     color: #0f172a;
 }}
 .card-titulo {{
@@ -764,8 +808,41 @@ table.det-aud td.td-bloque {{
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Calidad y Capacitación")
-st.caption("Panel de seguimiento de desempeño | Contactel")
+
+def cargar_logo_data_uri():
+    """Carga un archivo local de logo si existe; si no existe, devuelve None sin fallar."""
+    base_dir = Path(__file__).resolve().parent
+    candidatos = [
+        base_dir / "logo_contactel.png",
+        base_dir / "LOGO Contactel-01.png",
+        base_dir / "assets" / "logo_contactel.png",
+        base_dir / "assets" / "LOGO Contactel-01.png",
+    ]
+    for ruta in candidatos:
+        if ruta.exists() and ruta.is_file():
+            try:
+                raw = ruta.read_bytes()
+                b64 = base64.b64encode(raw).decode("ascii")
+                return f"data:image/png;base64,{b64}"
+            except OSError:
+                return None
+    return None
+
+
+logo_uri = cargar_logo_data_uri()
+
+col_tit, col_logo = st.columns([5, 1.5])
+with col_tit:
+    st.title("Calidad y Capacitación")
+    st.caption("Panel de seguimiento de desempeño | Contactel")
+with col_logo:
+    if logo_uri:
+        st.markdown(
+            f'<div class="header-brand-wrap">'
+            f'<img src="{logo_uri}" alt="Contactel" class="header-brand-logo"/>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
 # =====================================================
 # FUENTE DE DATOS
@@ -1872,6 +1949,13 @@ ases_disp = sorted(df["Asesor"].dropna().unique())
 # MENÚ LATERAL IZQUIERDO (ORDEN SOLICITADO)
 # =====================================================
 with st.sidebar:
+    if logo_uri:
+        st.markdown(
+            f'<div class="sidebar-brand-wrap">'
+            f'<img src="{logo_uri}" alt="Contactel" class="sidebar-brand-logo"/>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     st.markdown("## Vistas")
     seccion = st.radio(
         "Seleccionar vista:",
@@ -1974,8 +2058,12 @@ if seccion == "Vista por asesor":
                     f'</div>',
                     unsafe_allow_html=True
                 )
-                if st.button("Ver auditoria", key=f"btn_ver_aud_{idx_inicio}_{col_idx}", use_container_width=True):
-                    st.session_state["asesor_popup_activo"] = nom_asesor
+                _, col_btn_c, _ = st.columns([2, 2.2, 2])
+                with col_btn_c:
+                    st.markdown('<div class="btn-ver-aud-wrap">', unsafe_allow_html=True)
+                    if st.button("Ver auditoria", key=f"btn_ver_aud_{idx_inicio}_{col_idx}", use_container_width=True):
+                        st.session_state["asesor_popup_activo"] = nom_asesor
+                    st.markdown('</div>', unsafe_allow_html=True)
 
     asesor_popup = st.session_state.get("asesor_popup_activo")
     if asesor_popup and asesor_popup in asesores_a_mostrar:
