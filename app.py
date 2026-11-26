@@ -85,6 +85,17 @@ h1, h2 {{
     color: #1e293b !important;
 }}
 
+/* Título y subtítulo dentro del modal (dialog) en blanco */
+div[data-testid="stDialog"] h1,
+div[data-testid="stDialog"] h2,
+div[data-testid="stDialog"] h3,
+div[data-testid="stDialog"] [data-testid="stCaptionContainer"],
+div[data-testid="stDialog"] [data-testid="stCaptionContainer"] p,
+div[data-testid="stDialog"] [data-testid="stCaptionContainer"] span,
+div[data-testid="stDialog"] [data-testid="stCaptionContainer"] strong {{
+    color: #ffffff !important;
+}}
+
 /* Logo dentro del menú de vistas (sidebar) */
 .sidebar-brand-wrap {{
     display: flex;
