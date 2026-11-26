@@ -1200,9 +1200,9 @@ def construir_df_detalle_items(filtrado_det):
     return pd.DataFrame(registros, columns=cols_ordenadas)
 
 
-def render_controles_scroll_auditoria(id_sufijo):
+def render_controles_scroll_auditoria():
     components.html(
-        f"""
+        """
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:4px 0; font-family:sans-serif; font-size:12px; color:#334155;">
             <span style="font-weight:700;">Desplazar cuadro:</span>
             <button type="button" onclick="moverAud('left', 420)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">← Izquierda</button>
@@ -1212,7 +1212,7 @@ def render_controles_scroll_auditoria(id_sufijo):
             <button type="button" onclick="moverAud('reset', 0)" style="background:#f1f5f9; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">Inicio</button>
         </div>
         <script>
-        function moverAud(dir, px) {{
+        function moverAud(dir, px) {
             const doc = window.parent.document;
             const box = doc.getElementById("det_aud_scroll_box");
             if (!box) return;
@@ -1220,12 +1220,11 @@ def render_controles_scroll_auditoria(id_sufijo):
             if (dir === 'right') box.scrollLeft += px;
             if (dir === 'up') box.scrollTop -= px;
             if (dir === 'down') box.scrollTop += px;
-            if (dir === 'reset') {{ box.scrollLeft = 0; box.scrollTop = 0; }}
-        }}
+            if (dir === 'reset') { box.scrollLeft = 0; box.scrollTop = 0; }
+        }
         </script>
         """,
-        height=38,
-        key=f"ctrl_scroll_{id_sufijo}"
+        height=38
     )
 
 
@@ -1275,7 +1274,7 @@ def render_detalle_auditoria_pdf_html(df_det_items):
                 celdas.append(f'<td class="td-pct" style="background-color:{bg};">{val}</td>')
         filas_html.append(f"<tr>{''.join(celdas)}</tr>")
 
-    render_controles_scroll_auditoria("top")
+    render_controles_scroll_auditoria()
 
     st.markdown(
         f'<div id="det_aud_scroll_box" class="det-aud-wrap"><table class="det-aud">'
@@ -1285,7 +1284,7 @@ def render_detalle_auditoria_pdf_html(df_det_items):
         unsafe_allow_html=True
     )
 
-    render_controles_scroll_auditoria("bottom")
+    render_controles_scroll_auditoria()
 
 
 @st.cache_data(ttl=300)
