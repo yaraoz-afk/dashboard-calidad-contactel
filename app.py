@@ -108,6 +108,22 @@ h1, h2 {{
     color: #475569;
     margin-bottom: 14px;
 }}
+div[data-testid="stForm"] {{
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 18px 20px !important;
+}}
+div[data-testid="stTextInput"] input {{
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 6px !important;
+}}
+div[data-testid="stTextInput"] input::placeholder {{
+    color: #64748b !important;
+    opacity: 1 !important;
+}}
 
 /* Títulos y textos dentro del modal (dialog) en blanco puro */
 div[data-testid="stDialog"],
@@ -387,18 +403,32 @@ ul[role="listbox"] div,
     color: #0f172a !important;
 }}
 
-/* Botones generales */
+/* Botones generales y de formularios */
 .stButton > button,
-.stDownloadButton > button {{
+.stDownloadButton > button,
+div[data-testid="stFormSubmitButton"] > button,
+button[kind="formSubmit"] {{
     background-color: {VERDE_PRINCIPAL} !important;
+    background: {VERDE_PRINCIPAL} !important;
     color: #ffffff !important;
-    border: none !important;
+    border: 1px solid {VERDE_OSCURO} !important;
     border-radius: 6px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+}}
+.stButton > button *,
+.stDownloadButton > button *,
+div[data-testid="stFormSubmitButton"] > button *,
+button[kind="formSubmit"] * {{
+    color: #ffffff !important;
+    fill: #ffffff !important;
 }}
 .stButton > button:hover,
-.stDownloadButton > button:hover {{
+.stDownloadButton > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover,
+button[kind="formSubmit"]:hover {{
     background-color: {VERDE_OSCURO} !important;
+    background: {VERDE_OSCURO} !important;
     color: #ffffff !important;
 }}
 
