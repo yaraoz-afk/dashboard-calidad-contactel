@@ -717,6 +717,19 @@ table.det-aud td.td-meta {{
     font-weight: 600;
     white-space: nowrap;
 }}
+table.det-aud td.td-tipificacion {{
+    background-color: #ffffff;
+    color: #0f172a;
+    padding: 6px 8px;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+    vertical-align: top;
+    font-weight: 600;
+    min-width: 135px;
+    max-width: 210px;
+    white-space: normal;
+    line-height: 1.25;
+}}
 table.det-aud td.td-puntos-trabajar {{
     background-color: #ffffff;
     color: #0f172a;
@@ -1210,7 +1223,7 @@ def pct_bloque_en_fila(fila, criterios_bloque):
 @st.cache_data(ttl=120, show_spinner=False)
 def construir_df_detalle_items_cached(filtrado_det):
     columnas_fijas = [
-        "Asesor", "Fecha", "Campaña", "ID", "Puntaje",
+        "Asesor", "Fecha", "Campaña", "ID", "Tipificación", "Puntaje",
         "Puntos a trabajar", "Observaciones"
     ]
     registros = []
@@ -1223,6 +1236,7 @@ def construir_df_detalle_items_cached(filtrado_det):
             "Fecha": fecha_str,
             "Campaña": fila["Campaña"],
             "ID": fila["ID"] if fila["ID"] else "-",
+            "Tipificación": fila["Tipificación"] if fila["Tipificación"] else "-",
             "Puntaje": fmt_pct_dec(fila["Puntaje final"]) if pd.notna(fila["Puntaje final"]) else "-",
             "Puntos a trabajar": fila["Puntos a trabajar"] if fila["Puntos a trabajar"] else "-",
             "Observaciones": fila["Observaciones"] if fila["Observaciones"] else "-"
@@ -1282,7 +1296,7 @@ def render_detalle_auditoria_pdf_html(df_det_items):
         st.info("No hay auditorías para mostrar con los filtros seleccionados.")
         return
 
-    meta_cols = ["Fecha", "Campaña", "ID", "Puntaje", "Puntos a trabajar", "Observaciones"]
+    meta_cols = ["Fecha", "Campaña", "ID", "Tipificación", "Puntaje", "Puntos a trabajar", "Observaciones"]
     nombres_bloques = {b for b, _ in ESTRUCTURA_BLOQUES_PDF}
 
     th_html = ['<th class="th-asesor-fijo">Asesor</th>']
@@ -1303,7 +1317,9 @@ def render_detalle_auditoria_pdf_html(df_det_items):
             if col == "Asesor":
                 continue
             val = str(r[col])
-            if col == "Puntos a trabajar":
+            if col == "Tipificación":
+                celdas.append(f'<td class="td-tipificacion">{val}</td>')
+            elif col == "Puntos a trabajar":
                 celdas.append(f'<td class="td-puntos-trabajar">{val}</td>')
             elif col == "Observaciones":
                 celdas.append(f'<td class="td-observaciones">{val}</td>')
