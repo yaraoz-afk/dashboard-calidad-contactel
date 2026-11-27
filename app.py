@@ -1920,7 +1920,7 @@ def construir_deduccion_analitica_html(datos, contexto_label):
 # CARGA DE DATOS
 # =====================================================
 try:
-    df_crudo, df = leer_mediciones_crudo_y_procesado()
+    _, df = leer_mediciones_crudo_y_procesado()
 except Exception as error:
     st.error("No se pudieron cargar los datos desde Google Sheets.")
     st.exception(error)
@@ -2189,25 +2189,6 @@ else:
     render_cuadros_por_periodo_html(base_emp, e_camps_sel)
 
     st.markdown(construir_deduccion_analitica_html(base_emp, "Vista por empresa"), unsafe_allow_html=True)
-
-# =====================================================
-# DIAGNÓSTICO DE LECTURA DEL SHEET (PARA REVISAR CAMPAÑAS)
-# =====================================================
-with st.expander("Diagnóstico de campañas y fechas en el Sheet"):
-    resumen_camp_diag = df.groupby(["Campaña", "Año", "Mes"], as_index=False).agg(
-        Filas=("Asesor", "count"),
-        Asesores=("Asesor", lambda s: ", ".join(sorted(set(s)))),
-        Fechas_raw_muestra=("Fecha_raw", lambda s: ", ".join(sorted({x for x in s if x})[:3])),
-        Mes_raw_muestra=("Mes_raw", lambda s: ", ".join(sorted({x for x in s if x})[:3]))
-    ).sort_values(["Campaña", "Año", "Mes"])
-    st.caption(f"Filas CSV crudas: {len(df_crudo)} | Columnas CSV crudas: {df_crudo.shape[1]} | Registros cargados desde fila 10: {len(df)}")
-    st.dataframe(resumen_camp_diag, use_container_width=True, hide_index=True)
-
-    camp_inspeccion = st.selectbox("Inspeccionar filas de una campaña en todo el Sheet:", options=camp_disp, key="diag_camp_sel")
-    df_ins = df[df["Campaña_key"] == normalizar_clave_campana(camp_inspeccion)][
-        ["Fecha_raw", "Año", "Mes", "Mes_raw", "Asesor", "Campaña", "Puntaje final"]
-    ]
-    st.dataframe(df_ins, use_container_width=True, hide_index=True)
 
 # =====================================================
 # PIE Y ACTUALIZACIÓN
