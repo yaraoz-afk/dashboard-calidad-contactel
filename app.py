@@ -279,7 +279,7 @@ ul[role="listbox"] div,
     color: #ffffff !important;
 }}
 
-/* Botón compacto "Ver auditoria" dentro de cada tarjeta */
+/* Botón compacto "Ver auditoria" / "ver detalle" dentro de cada tarjeta */
 .btn-ver-aud-wrap .stButton > button {{
     min-height: 26px !important;
     height: 26px !important;
@@ -318,6 +318,32 @@ ul[role="listbox"] div,
     padding-bottom: 7px;
     border-bottom: 1px solid #e2e8f0;
 }}
+.enc-contadores {{
+    display: flex;
+    justify-content: space-around;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 6px;
+    margin-bottom: 10px;
+}}
+.enc-cnt-item {{
+    text-align: center;
+    flex: 1;
+}}
+.enc-cnt-num {{
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.15;
+}}
+.enc-cnt-lbl {{
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-top: 2px;
+}}
 .bloque-verde {{
     background: #f0fdf4;
     border-left: 3px solid {VERDE_PRINCIPAL};
@@ -342,6 +368,14 @@ ul[role="listbox"] div,
     font-size: 12px;
     line-height: 1.35;
 }}
+.bloque-azul {{
+    background: #eff6ff;
+    border-left: 3px solid #2563eb;
+    padding: 7px 9px;
+    margin-bottom: 7px;
+    font-size: 12px;
+    line-height: 1.35;
+}}
 .bloque-feedback {{
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
@@ -353,6 +387,7 @@ ul[role="listbox"] div,
 .tit-verde {{ color: #166534; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-rojo {{ color: #991b1b; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-naranja {{ color: #92400e; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
+.tit-azul {{ color: #1e40af; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 .tit-fb {{ color: #1e293b; font-weight: 800; font-size: 11.5px; margin-bottom: 2px; }}
 
 /* Matriz Mes x Campaña */
@@ -852,12 +887,24 @@ st.title("Calidad y Capacitación")
 st.caption("Panel de seguimiento de desempeño | Contactel")
 
 # =====================================================
-# FUENTE DE DATOS
+# FUENTES DE DATOS
 # =====================================================
 URL_MEDICION = (
     "https://docs.google.com/spreadsheets/d/e/"
     "2PACX-1vT5Y5jNYGiX9tk0RgKMb3alZ4DLM2YjYXkk5zjbFjy0kvFFKc-BVB--KpXEwPJHhzgFTtfd6uqFKj-t/"
     "pub?gid=0&single=true&output=csv"
+)
+
+URL_TALLERES = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vTg4uPACuLnySzZdV_KYogF5OeurPQmztxquAyWoyl6TVNwCKAGkKdGfe7FA8Mmlw612I3u8h9nbzkk/"
+    "pub?gid=1026009010&single=true&output=csv"
+)
+
+URL_DEVOLUCIONES = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vTg4uPACuLnySzZdV_KYogF5OeurPQmztxquAyWoyl6TVNwCKAGkKdGfe7FA8Mmlw612I3u8h9nbzkk/"
+    "pub?gid=14680736&single=true&output=csv"
 )
 
 # =====================================================
@@ -1142,7 +1189,12 @@ def parsear_fecha_segura(serie):
     return resultado
 
 
-def extraer_anio_seguro(fecha_dt, mes_raw, fecha_raw):
+def extraer_anio_seguro(fecha_dt, mes_raw, fecha_raw, anio_col_raw=""):
+    if anio_col_raw:
+        m_col = re.search(r"\b(202[4-9])\b", str(anio_col_raw))
+        if m_col:
+            return m_col.group(1)
+
     if pd.notna(fecha_dt):
         return str(int(fecha_dt.year))
 
@@ -1445,6 +1497,110 @@ def leer_mediciones_crudo_y_procesado():
     datos["Asesor_key"] = datos["Asesor"].apply(normalizar_clave)
 
     return bruto, datos
+
+
+@st.cache_data(ttl=300)
+def leer_talleres():
+    raw = pd.read_csv(
+        URL_TALLERES,
+        header=None,
+        dtype=str,
+        keep_default_na=False,
+        engine="python"
+    )
+    if raw.shape[1] < 7:
+        for _ in range(7 - raw.shape[1]):
+            raw[raw.shape[1]] = ""
+
+    # Los datos empiezan en la fila 3 (índice 2)
+    datos = raw.iloc[2:, :7].copy()
+    datos.columns = [
+        "Asesor", "Fecha_raw", "Mes_raw", "Campaña",
+        "Tipo de refuerzo/taller", "Feedback", "Año_raw"
+    ]
+
+    for col in datos.columns:
+        datos[col] = datos[col].apply(limpiar_texto_etiqueta)
+
+    datos = datos[
+        (datos["Asesor"] != "")
+        | (datos["Campaña"] != "")
+        | (datos["Tipo de refuerzo/taller"] != "")
+        | (datos["Feedback"] != "")
+    ].copy()
+    datos["Asesor"] = datos["Asesor"].replace("", "Sin asesor")
+    datos["Campaña"] = datos["Campaña"].replace("", "Sin campaña")
+
+    datos["Fecha"] = parsear_fecha_segura(datos["Fecha_raw"])
+    datos["Mes"] = [
+        nombre_mes_desde_valor(m_raw, f_dt)
+        for m_raw, f_dt in zip(datos["Mes_raw"], datos["Fecha"])
+    ]
+    datos["Mes_orden"] = datos["Mes"].map(lambda m: ORDEN_MESES.get(m, 99))
+    datos["Año"] = [
+        extraer_anio_seguro(f_dt, m_raw, f_raw, a_raw)
+        for f_dt, m_raw, f_raw, a_raw in zip(
+            datos["Fecha"], datos["Mes_raw"], datos["Fecha_raw"], datos["Año_raw"]
+        )
+    ]
+    datos["Campaña_key"] = datos["Campaña"].apply(normalizar_clave_campana)
+    datos["Asesor_key"] = datos["Asesor"].apply(normalizar_clave)
+    datos["Tipo_encuentro"] = datos["Tipo de refuerzo/taller"].replace("", "Taller / Refuerzo")
+    datos["Archivo"] = ""
+    datos["Origen"] = "Taller"
+    return datos
+
+
+@st.cache_data(ttl=300)
+def leer_devoluciones():
+    raw = pd.read_csv(
+        URL_DEVOLUCIONES,
+        header=None,
+        dtype=str,
+        keep_default_na=False,
+        engine="python"
+    )
+    if raw.shape[1] < 8:
+        for _ in range(8 - raw.shape[1]):
+            raw[raw.shape[1]] = ""
+
+    # Los datos empiezan en la fila 2 (índice 1)
+    datos = raw.iloc[1:, :8].copy()
+    datos.columns = [
+        "Asesor", "Fecha_raw", "Mes_raw", "Campaña",
+        "Tipo de encuentro", "Archivo", "Feedback", "Año_raw"
+    ]
+
+    for col in datos.columns:
+        datos[col] = datos[col].apply(limpiar_texto_etiqueta)
+
+    datos = datos[
+        (datos["Asesor"] != "")
+        | (datos["Campaña"] != "")
+        | (datos["Tipo de encuentro"] != "")
+        | (datos["Feedback"] != "")
+        | (datos["Archivo"] != "")
+    ].copy()
+    datos["Asesor"] = datos["Asesor"].replace("", "Sin asesor")
+    datos["Campaña"] = datos["Campaña"].replace("", "Sin campaña")
+
+    datos["Fecha"] = parsear_fecha_segura(datos["Fecha_raw"])
+    datos["Mes"] = [
+        nombre_mes_desde_valor(m_raw, f_dt)
+        for m_raw, f_dt in zip(datos["Mes_raw"], datos["Fecha"])
+    ]
+    datos["Mes_orden"] = datos["Mes"].map(lambda m: ORDEN_MESES.get(m, 99))
+    datos["Año"] = [
+        extraer_anio_seguro(f_dt, m_raw, f_raw, a_raw)
+        for f_dt, m_raw, f_raw, a_raw in zip(
+            datos["Fecha"], datos["Mes_raw"], datos["Fecha_raw"], datos["Año_raw"]
+        )
+    ]
+    datos["Campaña_key"] = datos["Campaña"].apply(normalizar_clave_campana)
+    datos["Asesor_key"] = datos["Asesor"].apply(normalizar_clave)
+    datos["Tipo_encuentro"] = datos["Tipo de encuentro"].replace("", "Devolución")
+    datos["Origen"] = "Devolución"
+    return datos
 
 
 def construir_detalle_criterios(datos):
@@ -1784,6 +1940,140 @@ def resumen_feedback_comercial_consolidado(sub_a, ejes_a):
     return f"{parte_fort}, {parte_foco} ({n_aud} aud. | {prom_txt})."
 
 
+def analizar_feedback_encuentros(df_t_a, df_d_a):
+    """Genera deducciones separadas en lo comercial y en lo actitudinal a partir de feedbacks y tipos."""
+    partes_fb = []
+    if not df_t_a.empty:
+        for _, r in df_t_a.iterrows():
+            fb = limpiar_texto_etiqueta(r.get("Feedback", ""))
+            tp = limpiar_texto_etiqueta(r.get("Tipo_encuentro", ""))
+            if fb:
+                partes_fb.append(f"{tp}: {fb}" if tp else fb)
+    if not df_d_a.empty:
+        for _, r in df_d_a.iterrows():
+            fb = limpiar_texto_etiqueta(r.get("Feedback", ""))
+            tp = limpiar_texto_etiqueta(r.get("Tipo_encuentro", ""))
+            if fb:
+                partes_fb.append(f"{tp}: {fb}" if tp else fb)
+
+    if not partes_fb:
+        return (
+            "Sin comentarios de feedback cargados en el período seleccionado para evaluar técnica comercial.",
+            "Sin registros suficientes en feedback para valorar actitud, apertura o adherencia."
+        )
+
+    texto_full = " | ".join(partes_fb)
+    low = texto_full.lower()
+
+    ejes_com = []
+    if any(k in low for k in ["objec", "rechaz", "no le interesa", "caro", "precio", "cuota", "descuento"]):
+        ejes_com.append("manejo de objeciones y defensa de valor")
+    if any(k in low for k in ["cierre", "cerrar", "oferta", "propuesta", "beneficio", "cobertura", "plan"]):
+        ejes_com.append("argumentación de la propuesta y avance al cierre")
+    if any(k in low for k in ["sondeo", "pregunta", "necesidad", "indag", "escuch", "interrump"]):
+        ejes_com.append("sondeo inicial y escucha activa")
+    if any(k in low for k in ["legal", "valor a abonar", "obligator", "informar", "dato", "tipific"]):
+        ejes_com.append("precisión en la información y cierre formal")
+
+    rescate_com = partes_fb[-1]
+    if len(rescate_com) > 150:
+        rescate_com = rescate_com[:147].rstrip() + "..."
+
+    if ejes_com:
+        ded_comercial = (
+            f"Foco en <b>{', '.join(ejes_com[:2])}</b>. "
+            f"Último registro: <i>“{rescate_com}”</i>."
+        )
+    else:
+        ded_comercial = (
+            f"Seguimiento técnico sobre los encuentros registrados. "
+            f"Último registro: <i>“{rescate_com}”</i>."
+        )
+
+    senales_pos = [
+        "predisp", "receptiv", "actitud", "comprom", "particip", "buena onda",
+        "atent", "proactiv", "mejora", "avanza", "motiv", "interés", "interes", "colabor"
+    ]
+    senales_alerta = [
+        "a la defensiva", "defensiv", "desgano", "desgan", "poca participación", "poca participacion",
+        "no participa", "rígid", "rigid", "apático", "apatic", "dispers", "monóton", "monoton",
+        "cuesta", "resist", "duda", "nervios", "insegur"
+    ]
+
+    tiene_pos = any(k in low for k in senales_pos)
+    tiene_alert = any(k in low for k in senales_alerta)
+
+    if tiene_pos and not tiene_alert:
+        ded_actitudinal = (
+            "Actitud <b>receptiva y participativa</b> en los espacios de capacitación/devolución, "
+            "mostrando disposición para tomar los lineamientos y aplicarlos."
+        )
+    elif tiene_alert and not tiene_pos:
+        ded_actitudinal = (
+            "Se perciben señales de <b>tensión, rigidez o cautela</b> en el intercambio; "
+            "conviene acompañar con devoluciones cercanas, claras y orientadas a la práctica."
+        )
+    elif tiene_pos and tiene_alert:
+        ded_actitudinal = (
+            "Actitud con <b>matices según el momento</b>: muestra apertura en ciertos tramos, "
+            "pero requiere mayor soltura y confianza sostenida frente a los desvíos."
+        )
+    else:
+        ded_actitudinal = (
+            "Sin marcas explícitas de actitud en el texto del feedback; se sugiere observar "
+            "apertura al intercambio, nivel de participación y receptividad en el próximo encuentro."
+        )
+
+    return ded_comercial, ded_actitudinal
+
+
+def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
+    st.caption(
+        f"Recurso: **{nombre_recurso}** | Talleres: **{len(df_t_a)}** | Devoluciones: **{len(df_d_a)}**"
+    )
+
+    st.markdown("#### Talleres / Refuerzos")
+    if df_t_a.empty:
+        st.info("No hay talleres registrados para este asesor con los filtros actuales.")
+    else:
+        t_ord = df_t_a.sort_values("Fecha", ascending=False, na_position="last").copy()
+        t_ord["Fecha"] = [
+            f_dt.strftime("%d/%m/%Y") if pd.notna(f_dt) else (f_raw or "-")
+            for f_dt, f_raw in zip(t_ord["Fecha"], t_ord["Fecha_raw"])
+        ]
+        t_show = t_ord[["Fecha", "Campaña", "Tipo de refuerzo/taller", "Feedback"]].rename(
+            columns={"Tipo de refuerzo/taller": "Tipo de taller"}
+        )
+        st.dataframe(t_show, use_container_width=True, hide_index=True)
+
+    st.markdown("#### Devoluciones")
+    if df_d_a.empty:
+        st.info("No hay devoluciones registradas para este asesor con los filtros actuales.")
+    else:
+        d_ord = df_d_a.sort_values("Fecha", ascending=False, na_position="last").copy()
+        d_ord["Fecha"] = [
+            f_dt.strftime("%d/%m/%Y") if pd.notna(f_dt) else (f_raw or "-")
+            for f_dt, f_raw in zip(d_ord["Fecha"], d_ord["Fecha_raw"])
+        ]
+        d_show = d_ord[["Fecha", "Campaña", "Tipo de encuentro", "Archivo", "Feedback"]]
+        st.dataframe(d_show, use_container_width=True, hide_index=True)
+
+    if st.button("Cerrar ventana", key="btn_cerrar_popup_encuentros"):
+        st.session_state["encuentro_popup_activo"] = None
+        st.rerun()
+
+
+if hasattr(st, "dialog"):
+    @st.dialog("Detalle de encuentros por asesor", width="large")
+    def popup_encuentros_asesor(df_t_a, df_d_a, nombre_recurso):
+        mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso)
+else:
+    def popup_encuentros_asesor(df_t_a, df_d_a, nombre_recurso):
+        with st.container(border=True):
+            st.markdown("### Detalle de encuentros por asesor")
+            mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso)
+
+
 def construir_cuadro_comparativo(filtrado_ases, meses_activos):
     filas = []
     meses_ord = ordenar_meses(meses_activos)
@@ -1932,28 +2222,87 @@ def construir_deduccion_analitica_html(datos, contexto_label):
     )
 
 
+def construir_deduccion_encuentros_html(df_t_f, df_d_f):
+    n_t = len(df_t_f)
+    n_d = len(df_d_f)
+    total_enc = n_t + n_d
+    if total_enc == 0:
+        return (
+            '<div class="deduccion-box">'
+            '<div class="deduccion-titulo">Deducción final — Encuentros</div>'
+            '<div>No hay talleres ni devoluciones con los filtros seleccionados.</div>'
+            '</div>'
+        )
+
+    ases_unicos = {
+        normalizar_clave(a)
+        for a in list(df_t_f["Asesor"]) + list(df_d_f["Asesor"])
+        if limpiar_texto_etiqueta(a)
+    }
+    fb_todos = [
+        limpiar_texto_etiqueta(x)
+        for x in list(df_t_f.get("Feedback", [])) + list(df_d_f.get("Feedback", []))
+        if limpiar_texto_etiqueta(x)
+    ]
+
+    pos_html = (
+        f"Se registran <b>{total_enc}</b> encuentros en el filtro "
+        f"(<b>{n_t}</b> talleres/refuerzos y <b>{n_d}</b> devoluciones) alcanzando a "
+        f"<b>{len(ases_unicos)}</b> asesor(es), con <b>{len(fb_todos)}</b> feedback(s) cargados."
+    )
+
+    low_all = " ".join(fb_todos).lower()
+    alertas = []
+    if n_d > n_t * 2 and n_d >= 3:
+        alertas.append("El volumen de devoluciones supera ampliamente al de talleres; conviene revisar si hay desvíos recurrentes en piso.")
+    if any(k in low_all for k in ["objec", "cierre", "sondeo", "escuch", "beneficio"]):
+        alertas.append("En los feedbacks aparece recurrencia en aspectos comerciales (sondeo, escucha, objeciones o cierre).")
+    if any(k in low_all for k in ["defensiv", "desgano", "rígid", "rigid", "duda", "nervios"]):
+        alertas.append("Existen menciones actitudinales a cuidar en el seguimiento individual.")
+    if not alertas:
+        alertas.append("Sin alertas críticas de volumen o tono en los feedbacks del filtro actual.")
+
+    rec_html = (
+        "<b>Recomendación general:</b> Cruzar los hallazgos de talleres y devoluciones con los puntajes de auditoría "
+        "para priorizar refuerzos focalizados y verificar su impacto en las siguientes llamadas."
+    )
+
+    return (
+        '<div class="deduccion-box">'
+        '<div class="deduccion-titulo">Deducción final — Encuentros</div>'
+        f'<div class="ded-pos">{pos_html}</div>'
+        f'<div class="ded-alert">Alerta: {" | ".join(alertas)}</div>'
+        f'<div class="ded-rec">{rec_html}</div>'
+        '</div>'
+    )
+
+
 # =====================================================
 # CARGA DE DATOS
 # =====================================================
 try:
     _, df = leer_mediciones_crudo_y_procesado()
+    df_talleres = leer_talleres()
+    df_devoluciones = leer_devoluciones()
 except Exception as error:
     st.error("No se pudieron cargar los datos desde Google Sheets.")
     st.exception(error)
     st.stop()
 
-if df.empty:
-    st.warning("Todavía no hay auditorías para mostrar.")
+if df.empty and df_talleres.empty and df_devoluciones.empty:
+    st.warning("Todavía no hay información para mostrar.")
     st.stop()
 
-años_disp = sorted([a for a in df["Año"].dropna().unique() if a != "Sin año"])
-if "Sin año" in df["Año"].unique():
+base_filtros = df if not df.empty else pd.concat([df_talleres, df_devoluciones], ignore_index=True)
+
+años_disp = sorted([a for a in base_filtros["Año"].dropna().unique() if a != "Sin año"])
+if "Sin año" in base_filtros["Año"].unique():
     años_disp.append("Sin año")
-meses_disp = ordenar_meses(df["Mes"].dropna().unique())
-if "Sin mes" in df["Mes"].unique():
+meses_disp = ordenar_meses(base_filtros["Mes"].dropna().unique())
+if "Sin mes" in base_filtros["Mes"].unique():
     meses_disp.append("Sin mes")
-camp_disp = sorted(df["Campaña"].dropna().unique())
-ases_disp = sorted(df["Asesor"].dropna().unique())
+camp_disp = sorted(base_filtros["Campaña"].dropna().unique())
+ases_disp = sorted(base_filtros["Asesor"].dropna().unique())
 
 # =====================================================
 # MENÚ LATERAL IZQUIERDO (CON LOGO EN EL MENÚ DE VISTAS)
@@ -1963,7 +2312,12 @@ with st.sidebar:
     st.markdown("## Vistas")
     seccion = st.radio(
         "Seleccionar vista:",
-        options=["Vista por asesor", "Detalle por auditoria", "Vista por empresa"],
+        options=[
+            "Vista por asesor",
+            "Detalle por auditoria",
+            "Vista por empresa",
+            "Encuentros"
+        ],
         index=0,
         key="menu_lateral_vistas",
         label_visibility="collapsed"
@@ -2134,7 +2488,7 @@ elif seccion == "Detalle por auditoria":
 # =====================================================
 # VISTA 3: VISTA POR EMPRESA
 # =====================================================
-else:
+elif seccion == "Vista por empresa":
     st.subheader("Vista por empresa")
 
     fe1, fe2, fe3 = st.columns(3)
@@ -2205,6 +2559,138 @@ else:
     render_cuadros_por_periodo_html(base_emp, e_camps_sel)
 
     st.markdown(construir_deduccion_analitica_html(base_emp, "Vista por empresa"), unsafe_allow_html=True)
+
+# =====================================================
+# VISTA 4: ENCUENTROS (TALLERES + DEVOLUCIONES)
+# =====================================================
+else:
+    st.subheader("Encuentros")
+
+    enc_años = sorted(
+        list(set(años_disp) | set(df_talleres["Año"].dropna().unique()) | set(df_devoluciones["Año"].dropna().unique()))
+    )
+    if "Sin año" in enc_años:
+        enc_años.remove("Sin año")
+        enc_años.append("Sin año")
+
+    enc_meses = ordenar_meses(
+        list(meses_disp) + list(df_talleres["Mes"].dropna().unique()) + list(df_devoluciones["Mes"].dropna().unique())
+    )
+    if "Sin mes" in list(df_talleres["Mes"].unique()) + list(df_devoluciones["Mes"].unique()):
+        enc_meses.append("Sin mes")
+
+    enc_camps = sorted(
+        list(set(camp_disp) | set(df_talleres["Campaña"].dropna().unique()) | set(df_devoluciones["Campaña"].dropna().unique()))
+    )
+    enc_ases_disp = sorted(
+        list(set(ases_disp) | set(df_talleres["Asesor"].dropna().unique()) | set(df_devoluciones["Asesor"].dropna().unique()))
+    )
+
+    fe_1, fe_2, fe_3, fe_4 = st.columns(4)
+    with fe_1:
+        en_anios_sel = st.multiselect("Año", options=enc_años, default=enc_años, key="en_anio")
+    with fe_2:
+        en_meses_sel = st.multiselect("Mes", options=enc_meses, default=enc_meses, key="en_mes")
+    with fe_3:
+        en_camps_sel = st.multiselect("Campaña", options=enc_camps, default=enc_camps, key="en_camp")
+
+    _, ases_op_t = filtrar_registros(
+        df_talleres, en_anios_sel, en_meses_sel, en_camps_sel, ases_sel=None,
+        todas_ases_disp=enc_ases_disp
+    )
+    _, ases_op_d = filtrar_registros(
+        df_devoluciones, en_anios_sel, en_meses_sel, en_camps_sel, ases_sel=None,
+        todas_ases_disp=enc_ases_disp
+    )
+    ases_opciones_en = sorted(set(ases_op_t) | set(ases_op_d))
+    if not ases_opciones_en:
+        ases_opciones_en = list(enc_ases_disp)
+
+    firma_en = (
+        tuple(en_anios_sel or []),
+        tuple(en_meses_sel or []),
+        tuple(normalizar_clave_campana(c) for c in (en_camps_sel or []))
+    )
+    preparar_selector_asesor("en_ases", "en_firma_filtro", firma_en, ases_opciones_en)
+
+    with fe_4:
+        en_ases_sel = st.multiselect("Asesor", options=ases_opciones_en, key="en_ases")
+
+    filt_t, _ = filtrar_registros(
+        df_talleres, en_anios_sel, en_meses_sel, en_camps_sel, ases_sel=en_ases_sel,
+        todas_ases_disp=enc_ases_disp
+    )
+    filt_d, _ = filtrar_registros(
+        df_devoluciones, en_anios_sel, en_meses_sel, en_camps_sel, ases_sel=en_ases_sel,
+        todas_ases_disp=enc_ases_disp
+    )
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Talleres", len(filt_t), delta=f"Total Sheet: {len(df_talleres)}")
+    m2.metric("Devoluciones", len(filt_d), delta=f"Total Sheet: {len(df_devoluciones)}")
+    m3.metric("Total encuentros", len(filt_t) + len(filt_d))
+    ases_en_filtro = sorted(set(filt_t["Asesor"].unique()) | set(filt_d["Asesor"].unique()))
+    m4.metric("Asesores con encuentros", len(ases_en_filtro))
+
+    if not ases_en_filtro:
+        st.warning("No hay talleres ni devoluciones para los filtros seleccionados.")
+        st.markdown(construir_deduccion_encuentros_html(filt_t, filt_d), unsafe_allow_html=True)
+        st.stop()
+
+    for idx_inicio in range(0, len(ases_en_filtro), 3):
+        grupo = ases_en_filtro[idx_inicio:idx_inicio + 3]
+        cols = st.columns(len(grupo))
+
+        for col_idx, nom_asesor in enumerate(grupo):
+            clave_a = normalizar_clave(nom_asesor)
+            sub_t = filt_t[filt_t["Asesor_key"] == clave_a].copy()
+            sub_d = filt_d[filt_d["Asesor_key"] == clave_a].copy()
+
+            q_t = len(sub_t)
+            q_d = len(sub_d)
+            ded_com, ded_act = analizar_feedback_encuentros(sub_t, sub_d)
+
+            camps_a = sorted(set(sub_t["Campaña"].unique()) | set(sub_d["Campaña"].unique()))
+            sub_camp = " | ".join(camps_a) if camps_a else "Sin campaña"
+
+            with cols[col_idx]:
+                st.markdown(
+                    f'<div class="card-compacta">'
+                    f'<div class="card-titulo">{formatear_nombre_recurso(nom_asesor)}</div>'
+                    f'<div class="card-sub">{sub_camp}</div>'
+                    f'<div class="enc-contadores">'
+                    f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t}</div><div class="enc-cnt-lbl">Talleres</div></div>'
+                    f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_d}</div><div class="enc-cnt-lbl">Devoluciones</div></div>'
+                    f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t + q_d}</div><div class="enc-cnt-lbl">Total</div></div>'
+                    f'</div>'
+                    f'<div class="bloque-azul">'
+                    f'<div class="tit-azul">Análisis comercial</div>'
+                    f'<div>{ded_com}</div>'
+                    f'</div>'
+                    f'<div class="bloque-verde">'
+                    f'<div class="tit-verde">Análisis actitudinal</div>'
+                    f'<div>{ded_act}</div>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+                _, col_btn_c, _ = st.columns([2, 2.2, 2])
+                with col_btn_c:
+                    st.markdown('<div class="btn-ver-aud-wrap">', unsafe_allow_html=True)
+                    if st.button("ver detalle", key=f"btn_ver_enc_{idx_inicio}_{col_idx}", use_container_width=True):
+                        st.session_state["encuentro_popup_activo"] = nom_asesor
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+    enc_popup = st.session_state.get("encuentro_popup_activo")
+    if enc_popup and enc_popup in ases_en_filtro:
+        clave_pop = normalizar_clave(enc_popup)
+        popup_encuentros_asesor(
+            filt_t[filt_t["Asesor_key"] == clave_pop].copy(),
+            filt_d[filt_d["Asesor_key"] == clave_pop].copy(),
+            formatear_nombre_recurso(enc_popup)
+        )
+
+    st.markdown(construir_deduccion_encuentros_html(filt_t, filt_d), unsafe_allow_html=True)
 
 # =====================================================
 # PIE Y ACTUALIZACIÓN
