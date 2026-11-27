@@ -85,15 +85,60 @@ h1, h2 {{
     color: #1e293b !important;
 }}
 
-/* Título y subtítulo dentro del modal (dialog) en blanco */
+/* Títulos y textos dentro del modal (dialog) en blanco */
 div[data-testid="stDialog"] h1,
 div[data-testid="stDialog"] h2,
 div[data-testid="stDialog"] h3,
+div[data-testid="stDialog"] h4,
 div[data-testid="stDialog"] [data-testid="stCaptionContainer"],
 div[data-testid="stDialog"] [data-testid="stCaptionContainer"] p,
 div[data-testid="stDialog"] [data-testid="stCaptionContainer"] span,
-div[data-testid="stDialog"] [data-testid="stCaptionContainer"] strong {{
+div[data-testid="stDialog"] [data-testid="stCaptionContainer"] strong,
+div[data-testid="stDialog"] [data-testid="stHeading"] h1,
+div[data-testid="stDialog"] [data-testid="stHeading"] h2,
+div[data-testid="stDialog"] [data-testid="stHeading"] h3,
+div[data-testid="stDialog"] [data-testid="stHeading"] h4 {{
     color: #ffffff !important;
+}}
+
+/* Tabla legible y completa dentro del modal de encuentros */
+.enc-modal-wrap {{
+    width: 100%;
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin-bottom: 14px;
+}}
+table.enc-modal-tbl {{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    color: #0f172a;
+}}
+table.enc-modal-tbl th {{
+    background-color: #e2e8f0;
+    color: #0f172a;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    white-space: nowrap;
+}}
+table.enc-modal-tbl td {{
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+    line-height: 1.4;
+    color: #0f172a;
+    white-space: normal;
+    word-break: break-word;
+}}
+table.enc-modal-tbl td.col-fb-full {{
+    min-width: 320px;
+}}
+table.enc-modal-tbl tr:nth-child(even) td {{
+    background-color: #f8fafc;
 }}
 
 /* Logo dentro del menú de vistas (sidebar) */
@@ -291,7 +336,7 @@ ul[role="listbox"] div,
     margin-top: 6px !important;
 }}
 
-/* Tarjeta compacta por asesor */
+/* Tarjeta compacta por asesor / campaña */
 .card-compacta {{
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -2027,6 +2072,26 @@ def analizar_feedback_encuentros(df_t_a, df_d_a):
     return ded_comercial, ded_actitudinal
 
 
+def render_tabla_encuentros_completa(df_sub, columnas_cfg):
+    """Renderiza una tabla HTML donde el feedback y demás campos se muestran completos sin truncar."""
+    ths = "".join([f"<th>{etq}</th>" for _, etq in columnas_cfg])
+    trs = []
+    for _, r in df_sub.iterrows():
+        tds = []
+        for campo, etq in columnas_cfg:
+            val = limpiar_texto_etiqueta(r.get(campo, "")) or "-"
+            clase = ' class="col-fb-full"' if campo == "Feedback" else ""
+            tds.append(f"<td{clase}>{val}</td>")
+        trs.append(f"<tr>{''.join(tds)}</tr>")
+    st.markdown(
+        f'<div class="enc-modal-wrap"><table class="enc-modal-tbl">'
+        f'<thead><tr>{ths}</tr></thead>'
+        f'<tbody>{"".join(trs)}</tbody>'
+        f'</table></div>',
+        unsafe_allow_html=True
+    )
+
+
 def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
     st.caption(
         f"Recurso: **{nombre_recurso}** | Talleres: **{len(df_t_a)}** | Devoluciones: **{len(df_d_a)}**"
@@ -2037,26 +2102,39 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
         st.info("No hay talleres registrados para este asesor con los filtros actuales.")
     else:
         t_ord = df_t_a.sort_values("Fecha", ascending=False, na_position="last").copy()
-        t_ord["Fecha"] = [
+        t_ord["Fecha_fmt"] = [
             f_dt.strftime("%d/%m/%Y") if pd.notna(f_dt) else (f_raw or "-")
             for f_dt, f_raw in zip(t_ord["Fecha"], t_ord["Fecha_raw"])
         ]
-        t_show = t_ord[["Fecha", "Campaña", "Tipo de refuerzo/taller", "Feedback"]].rename(
-            columns={"Tipo de refuerzo/taller": "Tipo de taller"}
+        render_tabla_encuentros_completa(
+            t_ord,
+            [
+                ("Fecha_fmt", "Fecha"),
+                ("Campaña", "Campaña"),
+                ("Tipo de refuerzo/taller", "Tipo de taller"),
+                ("Feedback", "Feedback"),
+            ]
         )
-        st.dataframe(t_show, use_container_width=True, hide_index=True)
 
     st.markdown("#### Devoluciones")
     if df_d_a.empty:
         st.info("No hay devoluciones registradas para este asesor con los filtros actuales.")
     else:
         d_ord = df_d_a.sort_values("Fecha", ascending=False, na_position="last").copy()
-        d_ord["Fecha"] = [
+        d_ord["Fecha_fmt"] = [
             f_dt.strftime("%d/%m/%Y") if pd.notna(f_dt) else (f_raw or "-")
             for f_dt, f_raw in zip(d_ord["Fecha"], d_ord["Fecha_raw"])
         ]
-        d_show = d_ord[["Fecha", "Campaña", "Tipo de encuentro", "Archivo", "Feedback"]]
-        st.dataframe(d_show, use_container_width=True, hide_index=True)
+        render_tabla_encuentros_completa(
+            d_ord,
+            [
+                ("Fecha_fmt", "Fecha"),
+                ("Campaña", "Campaña"),
+                ("Tipo de encuentro", "Tipo de encuentro"),
+                ("Archivo", "Archivo"),
+                ("Feedback", "Feedback"),
+            ]
+        )
 
     if st.button("Cerrar ventana", key="btn_cerrar_popup_encuentros"):
         st.session_state["encuentro_popup_activo"] = None
@@ -2632,63 +2710,114 @@ else:
     ases_en_filtro = sorted(set(filt_t["Asesor"].unique()) | set(filt_d["Asesor"].unique()))
     m4.metric("Asesores con encuentros", len(ases_en_filtro))
 
-    if not ases_en_filtro:
+    if not ases_en_filtro and filt_t.empty and filt_d.empty:
         st.warning("No hay talleres ni devoluciones para los filtros seleccionados.")
         st.markdown(construir_deduccion_encuentros_html(filt_t, filt_d), unsafe_allow_html=True)
         st.stop()
 
-    for idx_inicio in range(0, len(ases_en_filtro), 3):
-        grupo = ases_en_filtro[idx_inicio:idx_inicio + 3]
-        cols = st.columns(len(grupo))
+    # Si el usuario no acotó el selector de asesores (tiene todos los disponibles seleccionados o vacío),
+    # priorizamos el resumen por campaña (cantidad de asesores, talleres, devoluciones y total).
+    # Si filtra/acota por asesor(es), mostramos las tarjetas por recurso.
+    filtro_asesor_acotado = bool(en_ases_sel) and (set(en_ases_sel) != set(ases_opciones_en))
 
-        for col_idx, nom_asesor in enumerate(grupo):
-            clave_a = normalizar_clave(nom_asesor)
-            sub_t = filt_t[filt_t["Asesor_key"] == clave_a].copy()
-            sub_d = filt_d[filt_d["Asesor_key"] == clave_a].copy()
+    modo_card = st.radio(
+        "Mostrar tarjetas por:",
+        options=["Campaña", "Asesor"],
+        index=1 if filtro_asesor_acotado else 0,
+        horizontal=True,
+        key="en_modo_tarjeta"
+    )
 
-            q_t = len(sub_t)
-            q_d = len(sub_d)
-            ded_com, ded_act = analizar_feedback_encuentros(sub_t, sub_d)
+    if modo_card == "Campaña":
+        camps_en_filtro = sorted(set(filt_t["Campaña"].unique()) | set(filt_d["Campaña"].unique()))
+        for idx_inicio in range(0, len(camps_en_filtro), 3):
+            grupo = camps_en_filtro[idx_inicio:idx_inicio + 3]
+            cols = st.columns(len(grupo))
 
-            camps_a = sorted(set(sub_t["Campaña"].unique()) | set(sub_d["Campaña"].unique()))
-            sub_camp = " | ".join(camps_a) if camps_a else "Sin campaña"
+            for col_idx, nom_camp in enumerate(grupo):
+                clave_c = normalizar_clave_campana(nom_camp)
+                sub_t_c = filt_t[filt_t["Campaña_key"] == clave_c].copy()
+                sub_d_c = filt_d[filt_d["Campaña_key"] == clave_c].copy()
 
-            with cols[col_idx]:
-                st.markdown(
-                    f'<div class="card-compacta">'
-                    f'<div class="card-titulo">{formatear_nombre_recurso(nom_asesor)}</div>'
-                    f'<div class="card-sub">{sub_camp}</div>'
-                    f'<div class="enc-contadores">'
-                    f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t}</div><div class="enc-cnt-lbl">Talleres</div></div>'
-                    f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_d}</div><div class="enc-cnt-lbl">Devoluciones</div></div>'
-                    f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t + q_d}</div><div class="enc-cnt-lbl">Total</div></div>'
-                    f'</div>'
-                    f'<div class="bloque-azul">'
-                    f'<div class="tit-azul">Análisis comercial</div>'
-                    f'<div>{ded_com}</div>'
-                    f'</div>'
-                    f'<div class="bloque-verde">'
-                    f'<div class="tit-verde">Análisis actitudinal</div>'
-                    f'<div>{ded_act}</div>'
-                    f'</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-                _, col_btn_c, _ = st.columns([2, 2.2, 2])
-                with col_btn_c:
-                    st.markdown('<div class="btn-ver-aud-wrap">', unsafe_allow_html=True)
-                    if st.button("ver detalle", key=f"btn_ver_enc_{idx_inicio}_{col_idx}", use_container_width=True):
-                        st.session_state["encuentro_popup_activo"] = nom_asesor
-                    st.markdown('</div>', unsafe_allow_html=True)
+                q_ases = len(set(sub_t_c["Asesor_key"]) | set(sub_d_c["Asesor_key"]))
+                q_t_c = len(sub_t_c)
+                q_d_c = len(sub_d_c)
+                ded_com_c, ded_act_c = analizar_feedback_encuentros(sub_t_c, sub_d_c)
 
-    enc_popup = st.session_state.get("encuentro_popup_activo")
-    if enc_popup and enc_popup in ases_en_filtro:
-        clave_pop = normalizar_clave(enc_popup)
-        popup_encuentros_asesor(
-            filt_t[filt_t["Asesor_key"] == clave_pop].copy(),
-            filt_d[filt_d["Asesor_key"] == clave_pop].copy(),
-            formatear_nombre_recurso(enc_popup)
-        )
+                with cols[col_idx]:
+                    st.markdown(
+                        f'<div class="card-compacta">'
+                        f'<div class="card-titulo">{nom_camp}</div>'
+                        f'<div class="card-sub">Asesores: <b>{q_ases}</b></div>'
+                        f'<div class="enc-contadores">'
+                        f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t_c}</div><div class="enc-cnt-lbl">Talleres</div></div>'
+                        f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_d_c}</div><div class="enc-cnt-lbl">Devoluciones</div></div>'
+                        f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t_c + q_d_c}</div><div class="enc-cnt-lbl">Total</div></div>'
+                        f'</div>'
+                        f'<div class="bloque-azul">'
+                        f'<div class="tit-azul">Análisis comercial</div>'
+                        f'<div>{ded_com_c}</div>'
+                        f'</div>'
+                        f'<div class="bloque-verde">'
+                        f'<div class="tit-verde">Análisis actitudinal</div>'
+                        f'<div>{ded_act_c}</div>'
+                        f'</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+    else:
+        for idx_inicio in range(0, len(ases_en_filtro), 3):
+            grupo = ases_en_filtro[idx_inicio:idx_inicio + 3]
+            cols = st.columns(len(grupo))
+
+            for col_idx, nom_asesor in enumerate(grupo):
+                clave_a = normalizar_clave(nom_asesor)
+                sub_t = filt_t[filt_t["Asesor_key"] == clave_a].copy()
+                sub_d = filt_d[filt_d["Asesor_key"] == clave_a].copy()
+
+                q_t = len(sub_t)
+                q_d = len(sub_d)
+                ded_com, ded_act = analizar_feedback_encuentros(sub_t, sub_d)
+
+                camps_a = sorted(set(sub_t["Campaña"].unique()) | set(sub_d["Campaña"].unique()))
+                sub_camp = " | ".join(camps_a) if camps_a else "Sin campaña"
+
+                with cols[col_idx]:
+                    st.markdown(
+                        f'<div class="card-compacta">'
+                        f'<div class="card-titulo">{formatear_nombre_recurso(nom_asesor)}</div>'
+                        f'<div class="card-sub">{sub_camp}</div>'
+                        f'<div class="enc-contadores">'
+                        f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t}</div><div class="enc-cnt-lbl">Talleres</div></div>'
+                        f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_d}</div><div class="enc-cnt-lbl">Devoluciones</div></div>'
+                        f'<div class="enc-cnt-item"><div class="enc-cnt-num">{q_t + q_d}</div><div class="enc-cnt-lbl">Total</div></div>'
+                        f'</div>'
+                        f'<div class="bloque-azul">'
+                        f'<div class="tit-azul">Análisis comercial</div>'
+                        f'<div>{ded_com}</div>'
+                        f'</div>'
+                        f'<div class="bloque-verde">'
+                        f'<div class="tit-verde">Análisis actitudinal</div>'
+                        f'<div>{ded_act}</div>'
+                        f'</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    _, col_btn_c, _ = st.columns([2, 2.2, 2])
+                    with col_btn_c:
+                        st.markdown('<div class="btn-ver-aud-wrap">', unsafe_allow_html=True)
+                        if st.button("ver detalle", key=f"btn_ver_enc_{idx_inicio}_{col_idx}", use_container_width=True):
+                            st.session_state["encuentro_popup_activo"] = nom_asesor
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+        enc_popup = st.session_state.get("encuentro_popup_activo")
+        if enc_popup and enc_popup in ases_en_filtro:
+            clave_pop = normalizar_clave(enc_popup)
+            popup_encuentros_asesor(
+                filt_t[filt_t["Asesor_key"] == clave_pop].copy(),
+                filt_d[filt_d["Asesor_key"] == clave_pop].copy(),
+                formatear_nombre_recurso(enc_popup)
+            )
 
     st.markdown(construir_deduccion_encuentros_html(filt_t, filt_d), unsafe_allow_html=True)
 
