@@ -1,4 +1,5 @@
 import base64
+import hmac
 from pathlib import Path
 import re
 import streamlit as st
@@ -83,6 +84,29 @@ h1, h2, h3, h4, p, label, span, div, .stMarkdown {{
 }}
 h1, h2 {{
     color: #1e293b !important;
+}}
+
+/* Caja de acceso por contraseña */
+.login-card {{
+    max-width: 420px;
+    margin: 48px auto 16px auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-top: 4px solid {VERDE_PRINCIPAL};
+    border-radius: 8px;
+    padding: 24px 22px;
+    color: #0f172a;
+}}
+.login-titulo {{
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 6px;
+}}
+.login-sub {{
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 14px;
 }}
 
 /* Títulos y textos dentro del modal (dialog) en blanco puro */
@@ -953,6 +977,57 @@ table.det-aud td.td-bloque {{
 }}
 </style>
 """, unsafe_allow_html=True)
+
+
+def obtener_clave_secreta():
+    try:
+        val = st.secrets.get("APP_PASSWORD", "")
+    except Exception:
+        val = ""
+    return str(val).strip()
+
+
+def exigir_clave_acceso():
+    if st.session_state.get("acceso_autorizado") is True:
+        return
+
+    clave_esperada = obtener_clave_secreta()
+
+    st.markdown(
+        '<div class="login-card">'
+        '<div class="login-titulo">Acceso restringido — Calidad y Capacitación</div>'
+        '<div class="login-sub">Ingresá la clave de acceso para ver el panel.</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    _, col_c, _ = st.columns([1, 1.3, 1])
+    with col_c:
+        if not clave_esperada:
+            st.error(
+                "Falta configurar `APP_PASSWORD` en Secrets (Manage app → Settings → Secrets)."
+            )
+            st.stop()
+
+        with st.form("form_clave_acceso", clear_on_submit=False):
+            clave_ingresada = st.text_input(
+                "Contraseña",
+                type="password",
+                placeholder="Escribí la contraseña"
+            )
+            entrar = st.form_submit_button("Ingresar", use_container_width=True)
+
+        if entrar:
+            if hmac.compare_digest(clave_ingresada.strip(), clave_esperada):
+                st.session_state["acceso_autorizado"] = True
+                st.rerun()
+            else:
+                st.error("Contraseña incorrecta. Revisá e intentá de nuevo.")
+
+    st.stop()
+
+
+exigir_clave_acceso()
 
 
 def render_logo_contactel_sidebar():
@@ -2488,6 +2563,10 @@ with st.sidebar:
         key="menu_lateral_vistas",
         label_visibility="collapsed"
     )
+    st.divider()
+    if st.button("Cerrar sesión", key="btn_cerrar_sesion_sidebar"):
+        st.session_state["acceso_autorizado"] = False
+        st.rerun()
 
 # =====================================================
 # VISTA 1: VISTA POR ASESOR
