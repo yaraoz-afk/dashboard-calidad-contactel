@@ -86,6 +86,14 @@ h1, h2 {{
 }}
 
 /* Títulos y textos dentro del modal (dialog) en blanco */
+div[data-testid="stDialog"],
+div[data-testid="stDialog"] > div,
+div[data-testid="stDialog"] > div > div,
+div[role="dialog"],
+div[role="dialog"] > div,
+div[role="dialog"] > div > div {{
+    color: #ffffff !important;
+}}
 div[data-testid="stDialog"] h1,
 div[data-testid="stDialog"] h2,
 div[data-testid="stDialog"] h3,
@@ -97,26 +105,60 @@ div[data-testid="stDialog"] [data-testid="stCaptionContainer"] strong,
 div[data-testid="stDialog"] [data-testid="stHeading"] h1,
 div[data-testid="stDialog"] [data-testid="stHeading"] h2,
 div[data-testid="stDialog"] [data-testid="stHeading"] h3,
-div[data-testid="stDialog"] [data-testid="stHeading"] h4 {{
+div[data-testid="stDialog"] [data-testid="stHeading"] h4,
+div[data-testid="stDialog"] [data-testid="stHeading"] span,
+div[role="dialog"] h1,
+div[role="dialog"] h2,
+div[role="dialog"] h3,
+div[role="dialog"] h4,
+div[role="dialog"] [data-testid="stCaptionContainer"],
+div[role="dialog"] [data-testid="stCaptionContainer"] p,
+div[role="dialog"] [data-testid="stCaptionContainer"] span,
+div[role="dialog"] [data-testid="stCaptionContainer"] strong,
+div[role="dialog"] [data-testid="stHeading"] h1,
+div[role="dialog"] [data-testid="stHeading"] h2,
+div[role="dialog"] [data-testid="stHeading"] h3,
+div[role="dialog"] [data-testid="stHeading"] h4,
+div[role="dialog"] [data-testid="stHeading"] span {{
     color: #ffffff !important;
 }}
 
-/* Tabla legible y completa dentro del modal de encuentros */
+/* Tabla legible y completa dentro del modal de encuentros con barra de scroll visible */
 .enc-modal-wrap {{
     width: 100%;
-    overflow-x: auto;
+    max-height: 360px;
+    overflow: scroll !important;
+    scrollbar-width: auto !important;
+    scrollbar-color: #64748b #e2e8f0 !important;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    margin-bottom: 14px;
+    margin: 6px 0 12px 0;
+}}
+.enc-modal-wrap::-webkit-scrollbar {{
+    width: 12px;
+    height: 12px;
+}}
+.enc-modal-wrap::-webkit-scrollbar-track {{
+    background: #e2e8f0;
+    border-radius: 6px;
+}}
+.enc-modal-wrap::-webkit-scrollbar-thumb {{
+    background: #64748b;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
 }}
 table.enc-modal-tbl {{
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 12.5px;
     color: #0f172a;
 }}
 table.enc-modal-tbl th {{
+    position: sticky;
+    top: 0;
+    z-index: 2;
     background-color: #e2e8f0;
     color: #0f172a;
     font-weight: 700;
@@ -135,7 +177,8 @@ table.enc-modal-tbl td {{
     word-break: break-word;
 }}
 table.enc-modal-tbl td.col-fb-full {{
-    min-width: 320px;
+    min-width: 360px;
+    max-width: 680px;
 }}
 table.enc-modal-tbl tr:nth-child(even) td {{
     background-color: #f8fafc;
@@ -1137,6 +1180,28 @@ def normalizar_clave_campana(valor):
     return texto
 
 
+def contar_talleres_unicos(df_t):
+    """Si varios talleres ocurren el mismo día y tienen el mismo nombre, cuentan como 1."""
+    if df_t is None or df_t.empty:
+        return 0
+    claves_unicas = set()
+    for _, r in df_t.iterrows():
+        f_dt = r.get("Fecha", pd.NaT)
+        if pd.notna(f_dt):
+            dia_key = f_dt.strftime("%Y-%m-%d")
+        else:
+            dia_key = normalizar_clave(r.get("Fecha_raw", "")) or "sin_fecha"
+
+        nombre_t = (
+            limpiar_texto_etiqueta(r.get("Tipo de refuerzo/taller", ""))
+            or limpiar_texto_etiqueta(r.get("Tipo_encuentro", ""))
+            or "taller / refuerzo"
+        )
+        taller_key = normalizar_clave(nombre_t)
+        claves_unicas.add((dia_key, taller_key))
+    return len(claves_unicas)
+
+
 def parsear_mes_texto(mes_raw):
     texto = normalizar_clave(mes_raw)
     if not texto or texto in ("nan", "nat", "sin mes"):
@@ -1360,32 +1425,36 @@ def construir_df_detalle_items(filtrado_det):
     return construir_df_detalle_items_cached(filtrado_det)
 
 
-def render_controles_scroll_auditoria():
+def render_controles_scroll_contenedor(box_id, uid):
     components.html(
-        """
+        f"""
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:4px 0; font-family:sans-serif; font-size:12px; color:#334155;">
             <span style="font-weight:700;">Desplazar cuadro:</span>
-            <button type="button" onclick="moverAud('left', 420)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">← Izquierda</button>
-            <button type="button" onclick="moverAud('right', 420)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">→ Derecha</button>
-            <button type="button" onclick="moverAud('up', 260)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">↑ Arriba</button>
-            <button type="button" onclick="moverAud('down', 260)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">↓ Abajo</button>
-            <button type="button" onclick="moverAud('reset', 0)" style="background:#f1f5f9; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">Inicio</button>
+            <button type="button" onclick="mover_{uid}('left', 360)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">← Izquierda</button>
+            <button type="button" onclick="mover_{uid}('right', 360)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">→ Derecha</button>
+            <button type="button" onclick="mover_{uid}('up', 220)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">↑ Arriba</button>
+            <button type="button" onclick="mover_{uid}('down', 220)" style="background:#ffffff; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">↓ Abajo</button>
+            <button type="button" onclick="mover_{uid}('reset', 0)" style="background:#f1f5f9; color:#0f172a; border:1px solid #94a3b8; border-radius:5px; padding:4px 10px; font-weight:600; cursor:pointer;">Inicio</button>
         </div>
         <script>
-        function moverAud(dir, px) {
+        function mover_{uid}(dir, px) {{
             const doc = window.parent.document;
-            const box = doc.getElementById("det_aud_scroll_box");
+            const box = doc.getElementById("{box_id}");
             if (!box) return;
             if (dir === 'left') box.scrollLeft -= px;
             if (dir === 'right') box.scrollLeft += px;
             if (dir === 'up') box.scrollTop -= px;
             if (dir === 'down') box.scrollTop += px;
-            if (dir === 'reset') { box.scrollLeft = 0; box.scrollTop = 0; }
-        }
+            if (dir === 'reset') {{ box.scrollLeft = 0; box.scrollTop = 0; }}
+        }}
         </script>
         """,
         height=38
     )
+
+
+def render_controles_scroll_auditoria():
+    render_controles_scroll_contenedor("det_aud_scroll_box", "aud")
 
 
 def render_detalle_auditoria_pdf_html(df_det_items):
@@ -2072,8 +2141,8 @@ def analizar_feedback_encuentros(df_t_a, df_d_a):
     return ded_comercial, ded_actitudinal
 
 
-def render_tabla_encuentros_completa(df_sub, columnas_cfg):
-    """Renderiza una tabla HTML donde el feedback y demás campos se muestran completos sin truncar."""
+def render_tabla_encuentros_completa(df_sub, columnas_cfg, box_id, uid):
+    """Renderiza una tabla HTML con barra de navegación y feedback completo sin truncar."""
     ths = "".join([f"<th>{etq}</th>" for _, etq in columnas_cfg])
     trs = []
     for _, r in df_sub.iterrows():
@@ -2083,21 +2152,25 @@ def render_tabla_encuentros_completa(df_sub, columnas_cfg):
             clase = ' class="col-fb-full"' if campo == "Feedback" else ""
             tds.append(f"<td{clase}>{val}</td>")
         trs.append(f"<tr>{''.join(tds)}</tr>")
+
+    render_controles_scroll_contenedor(box_id, uid)
     st.markdown(
-        f'<div class="enc-modal-wrap"><table class="enc-modal-tbl">'
+        f'<div id="{box_id}" class="enc-modal-wrap"><table class="enc-modal-tbl">'
         f'<thead><tr>{ths}</tr></thead>'
         f'<tbody>{"".join(trs)}</tbody>'
         f'</table></div>',
         unsafe_allow_html=True
     )
+    render_controles_scroll_contenedor(box_id, f"{uid}_bot")
 
 
 def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
+    q_t_unicos = contar_talleres_unicos(df_t_a)
     st.caption(
-        f"Recurso: **{nombre_recurso}** | Talleres: **{len(df_t_a)}** | Devoluciones: **{len(df_d_a)}**"
+        f"Recurso: **{nombre_recurso}** | Talleres: **{q_t_unicos}** | Devoluciones: **{len(df_d_a)}**"
     )
 
-    st.markdown("#### Talleres / Refuerzos")
+    st.markdown('<h4 style="color:#ffffff !important;">Talleres / Refuerzos</h4>', unsafe_allow_html=True)
     if df_t_a.empty:
         st.info("No hay talleres registrados para este asesor con los filtros actuales.")
     else:
@@ -2113,10 +2186,12 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
                 ("Campaña", "Campaña"),
                 ("Tipo de refuerzo/taller", "Tipo de taller"),
                 ("Feedback", "Feedback"),
-            ]
+            ],
+            box_id="enc_talleres_scroll_box",
+            uid="enc_t"
         )
 
-    st.markdown("#### Devoluciones")
+    st.markdown('<h4 style="color:#ffffff !important;">Devoluciones</h4>', unsafe_allow_html=True)
     if df_d_a.empty:
         st.info("No hay devoluciones registradas para este asesor con los filtros actuales.")
     else:
@@ -2133,7 +2208,9 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
                 ("Tipo de encuentro", "Tipo de encuentro"),
                 ("Archivo", "Archivo"),
                 ("Feedback", "Feedback"),
-            ]
+            ],
+            box_id="enc_devoluciones_scroll_box",
+            uid="enc_d"
         )
 
     if st.button("Cerrar ventana", key="btn_cerrar_popup_encuentros"):
@@ -2144,6 +2221,10 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
 if hasattr(st, "dialog"):
     @st.dialog("Detalle de encuentros por asesor", width="large")
     def popup_encuentros_asesor(df_t_a, df_d_a, nombre_recurso):
+        st.markdown(
+            '<h3 style="color:#ffffff !important; margin-top:0;">Detalle de encuentros por asesor</h3>',
+            unsafe_allow_html=True
+        )
         mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso)
 else:
     def popup_encuentros_asesor(df_t_a, df_d_a, nombre_recurso):
@@ -2301,7 +2382,7 @@ def construir_deduccion_analitica_html(datos, contexto_label):
 
 
 def construir_deduccion_encuentros_html(df_t_f, df_d_f):
-    n_t = len(df_t_f)
+    n_t = contar_talleres_unicos(df_t_f)
     n_d = len(df_d_f)
     total_enc = n_t + n_d
     if total_enc == 0:
@@ -2703,10 +2784,14 @@ else:
         todas_ases_disp=enc_ases_disp
     )
 
+    q_t_filt = contar_talleres_unicos(filt_t)
+    q_t_sheet = contar_talleres_unicos(df_talleres)
+    q_d_filt = len(filt_d)
+
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Talleres", len(filt_t), delta=f"Total Sheet: {len(df_talleres)}")
-    m2.metric("Devoluciones", len(filt_d), delta=f"Total Sheet: {len(df_devoluciones)}")
-    m3.metric("Total encuentros", len(filt_t) + len(filt_d))
+    m1.metric("Talleres", q_t_filt, delta=f"Total Sheet: {q_t_sheet}")
+    m2.metric("Devoluciones", q_d_filt, delta=f"Total Sheet: {len(df_devoluciones)}")
+    m3.metric("Total encuentros", q_t_filt + q_d_filt)
     ases_en_filtro = sorted(set(filt_t["Asesor"].unique()) | set(filt_d["Asesor"].unique()))
     m4.metric("Asesores con encuentros", len(ases_en_filtro))
 
@@ -2715,9 +2800,6 @@ else:
         st.markdown(construir_deduccion_encuentros_html(filt_t, filt_d), unsafe_allow_html=True)
         st.stop()
 
-    # Si el usuario no acotó el selector de asesores (tiene todos los disponibles seleccionados o vacío),
-    # priorizamos el resumen por campaña (cantidad de asesores, talleres, devoluciones y total).
-    # Si filtra/acota por asesor(es), mostramos las tarjetas por recurso.
     filtro_asesor_acotado = bool(en_ases_sel) and (set(en_ases_sel) != set(ases_opciones_en))
 
     modo_card = st.radio(
@@ -2740,7 +2822,7 @@ else:
                 sub_d_c = filt_d[filt_d["Campaña_key"] == clave_c].copy()
 
                 q_ases = len(set(sub_t_c["Asesor_key"]) | set(sub_d_c["Asesor_key"]))
-                q_t_c = len(sub_t_c)
+                q_t_c = contar_talleres_unicos(sub_t_c)
                 q_d_c = len(sub_d_c)
                 ded_com_c, ded_act_c = analizar_feedback_encuentros(sub_t_c, sub_d_c)
 
@@ -2775,7 +2857,7 @@ else:
                 sub_t = filt_t[filt_t["Asesor_key"] == clave_a].copy()
                 sub_d = filt_d[filt_d["Asesor_key"] == clave_a].copy()
 
-                q_t = len(sub_t)
+                q_t = contar_talleres_unicos(sub_t)
                 q_d = len(sub_d)
                 ded_com, ded_act = analizar_feedback_encuentros(sub_t, sub_d)
 
