@@ -1050,6 +1050,8 @@ def exigir_clave_acceso():
         if entrar:
             if hmac.compare_digest(clave_ingresada.strip(), clave_esperada):
                 st.session_state["acceso_autorizado"] = True
+                st.session_state["asesor_popup_activo"] = None
+                st.session_state["encuentro_popup_activo"] = None
                 st.rerun()
             else:
                 st.error("Contraseña incorrecta. Revisá e intentá de nuevo.")
@@ -1742,7 +1744,6 @@ def leer_talleres():
         for _ in range(7 - raw.shape[1]):
             raw[raw.shape[1]] = ""
 
-    # Los datos empiezan en la fila 3 (índice 2)
     datos = raw.iloc[2:, :7].copy()
     datos.columns = [
         "Asesor", "Fecha_raw", "Mes_raw", "Campaña",
@@ -1794,7 +1795,6 @@ def leer_devoluciones():
         for _ in range(8 - raw.shape[1]):
             raw[raw.shape[1]] = ""
 
-    # Los datos empiezan en la fila 2 (índice 1)
     datos = raw.iloc[1:, :8].copy()
     datos.columns = [
         "Asesor", "Fecha_raw", "Mes_raw", "Campaña",
@@ -2596,6 +2596,8 @@ with st.sidebar:
     st.divider()
     if st.button("Cerrar sesión", key="btn_cerrar_sesion_sidebar"):
         st.session_state["acceso_autorizado"] = False
+        st.session_state["asesor_popup_activo"] = None
+        st.session_state["encuentro_popup_activo"] = None
         st.rerun()
 
 # =====================================================
