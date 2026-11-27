@@ -85,7 +85,7 @@ h1, h2 {{
     color: #1e293b !important;
 }}
 
-/* Títulos y textos dentro del modal (dialog) en blanco */
+/* Títulos y textos dentro del modal (dialog) en blanco puro */
 div[data-testid="stDialog"],
 div[data-testid="stDialog"] > div,
 div[data-testid="stDialog"] > div > div,
@@ -94,33 +94,44 @@ div[role="dialog"] > div,
 div[role="dialog"] > div > div {{
     color: #ffffff !important;
 }}
+
 div[data-testid="stDialog"] h1,
 div[data-testid="stDialog"] h2,
 div[data-testid="stDialog"] h3,
 div[data-testid="stDialog"] h4,
+div[data-testid="stDialog"] [data-testid="stHeading"],
+div[data-testid="stDialog"] [data-testid="stHeading"] *,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h1,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h3,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h4,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] p,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] span,
 div[data-testid="stDialog"] [data-testid="stCaptionContainer"],
-div[data-testid="stDialog"] [data-testid="stCaptionContainer"] p,
-div[data-testid="stDialog"] [data-testid="stCaptionContainer"] span,
-div[data-testid="stDialog"] [data-testid="stCaptionContainer"] strong,
-div[data-testid="stDialog"] [data-testid="stHeading"] h1,
-div[data-testid="stDialog"] [data-testid="stHeading"] h2,
-div[data-testid="stDialog"] [data-testid="stHeading"] h3,
-div[data-testid="stDialog"] [data-testid="stHeading"] h4,
-div[data-testid="stDialog"] [data-testid="stHeading"] span,
+div[data-testid="stDialog"] [data-testid="stCaptionContainer"] *,
 div[role="dialog"] h1,
 div[role="dialog"] h2,
 div[role="dialog"] h3,
 div[role="dialog"] h4,
+div[role="dialog"] [data-testid="stHeading"],
+div[role="dialog"] [data-testid="stHeading"] *,
+div[role="dialog"] [data-testid="stMarkdownContainer"] h1,
+div[role="dialog"] [data-testid="stMarkdownContainer"] h2,
+div[role="dialog"] [data-testid="stMarkdownContainer"] h3,
+div[role="dialog"] [data-testid="stMarkdownContainer"] h4,
+div[role="dialog"] [data-testid="stMarkdownContainer"] p,
+div[role="dialog"] [data-testid="stMarkdownContainer"] span,
 div[role="dialog"] [data-testid="stCaptionContainer"],
-div[role="dialog"] [data-testid="stCaptionContainer"] p,
-div[role="dialog"] [data-testid="stCaptionContainer"] span,
-div[role="dialog"] [data-testid="stCaptionContainer"] strong,
-div[role="dialog"] [data-testid="stHeading"] h1,
-div[role="dialog"] [data-testid="stHeading"] h2,
-div[role="dialog"] [data-testid="stHeading"] h3,
-div[role="dialog"] [data-testid="stHeading"] h4,
-div[role="dialog"] [data-testid="stHeading"] span {{
+div[role="dialog"] [data-testid="stCaptionContainer"] * {{
     color: #ffffff !important;
+}}
+
+/* Asegurar que el contenido interno de las tablas blancas del modal siga legible en oscuro */
+div[data-testid="stDialog"] .enc-modal-wrap,
+div[data-testid="stDialog"] .enc-modal-wrap *,
+div[role="dialog"] .enc-modal-wrap,
+div[role="dialog"] .enc-modal-wrap * {{
+    color: #0f172a !important;
 }}
 
 /* Tabla legible y completa dentro del modal de encuentros con barra de scroll visible */
@@ -2170,7 +2181,7 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
         f"Recurso: **{nombre_recurso}** | Talleres: **{q_t_unicos}** | Devoluciones: **{len(df_d_a)}**"
     )
 
-    st.markdown('<h4 style="color:#ffffff !important;">Talleres / Refuerzos</h4>', unsafe_allow_html=True)
+    st.markdown("### Talleres / Refuerzos")
     if df_t_a.empty:
         st.info("No hay talleres registrados para este asesor con los filtros actuales.")
     else:
@@ -2191,7 +2202,7 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
             uid="enc_t"
         )
 
-    st.markdown('<h4 style="color:#ffffff !important;">Devoluciones</h4>', unsafe_allow_html=True)
+    st.markdown("### Devoluciones")
     if df_d_a.empty:
         st.info("No hay devoluciones registradas para este asesor con los filtros actuales.")
     else:
@@ -2221,10 +2232,6 @@ def mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso):
 if hasattr(st, "dialog"):
     @st.dialog("Detalle de encuentros por asesor", width="large")
     def popup_encuentros_asesor(df_t_a, df_d_a, nombre_recurso):
-        st.markdown(
-            '<h3 style="color:#ffffff !important; margin-top:0;">Detalle de encuentros por asesor</h3>',
-            unsafe_allow_html=True
-        )
         mostrar_contenido_popup_encuentros(df_t_a, df_d_a, nombre_recurso)
 else:
     def popup_encuentros_asesor(df_t_a, df_d_a, nombre_recurso):
